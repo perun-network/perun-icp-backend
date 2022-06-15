@@ -13,6 +13,10 @@ type Backend struct{}
 
 var _ wallet.Backend = Backend{}
 
+func init() {
+	wallet.SetBackend(Backend{})
+}
+
 func (Backend) NewAddress() wallet.Address {
 	a := make(Address, 0)
 	return &a
