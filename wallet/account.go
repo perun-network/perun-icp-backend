@@ -1,4 +1,4 @@
-//
+// SPDX-License-Identifier: Apache-2.0
 
 package wallet
 
@@ -9,6 +9,8 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+// Account is an ed25519 signing key. It signs messages for a perun off-chain
+// identity in internet computer channels.
 type Account ed.PrivateKey
 
 var _ wallet.Account = (*Account)(nil)

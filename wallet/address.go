@@ -1,4 +1,4 @@
-//
+// SPDX-License-Identifier: Apache-2.0
 
 package wallet
 
@@ -11,6 +11,8 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+// Address is an ed25519 public key and represents a perun off-chain
+// identity in internet computer channels.
 type Address ed.PublicKey
 
 var _ wallet.Address = (*Address)(nil)

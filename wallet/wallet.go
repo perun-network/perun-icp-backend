@@ -1,4 +1,4 @@
-//
+// SPDX-License-Identifier: Apache-2.0
 
 package wallet
 
@@ -15,6 +15,10 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+// FsWallet is a garbage-collected file system key store, removing all keys when
+// they are no longer used. Generated keys will not be persisted to permanent
+// storage unless IncrementUsage() is called on them. Once a key is no longer
+// used (as indicated by DecrementUsage()), it is deleted from storage.
 type FsWallet struct {
 	mutex sync.Mutex
 	file  string
@@ -32,6 +36,7 @@ type openAcc struct {
 
 var bo = binary.LittleEndian
 
+// NewRAMWallet creates an unpersisted FsWallet.
 func NewRAMWallet(gen io.Reader) *FsWallet {
 	w := FsWallet{
 		openAccs: make(map[string]*openAcc),
@@ -42,6 +47,8 @@ func NewRAMWallet(gen io.Reader) *FsWallet {
 	return &w
 }
 
+// CreateOrLoadFsWallet loads the wallet from the requested path, otherwise, it
+// creates a new one and saves it to the requested path.
 func CreateOrLoadFsWallet(path string, gen io.Reader) (*FsWallet, error) {
 	w := FsWallet{
 		file:     path,
@@ -126,7 +133,8 @@ func (w *FsWallet) genAcc(id uint64) Account {
 	return Account(sk)
 }
 
-// NewAccount creates a fresh unlocked account.
+// NewAccount creates a fresh unlocked account. This account is not persisted
+// until IncrementUsage() is called on it.
 func (w *FsWallet) NewAccount() Account {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
@@ -142,6 +150,7 @@ func (w *FsWallet) NewAccount() Account {
 	return acc
 }
 
+// Unlock retrieves the account belonging to the requested address.
 func (w *FsWallet) Unlock(a wallet.Address) (wallet.Account, error) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
@@ -158,6 +167,7 @@ func (w *FsWallet) Unlock(a wallet.Address) (wallet.Account, error) {
 	return acc.acc, nil
 }
 
+// LockAll disables all currently unlocked accounts.
 func (w *FsWallet) LockAll() {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
@@ -168,6 +178,9 @@ func (w *FsWallet) LockAll() {
 	}
 }
 
+// IncrementUsage tracks how many times an account is in use. Use
+// DecrementUsage() when an account is no longer used. Once the counter reaches
+// 0, the account is deleted.
 func (w *FsWallet) IncrementUsage(a wallet.Address) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
@@ -179,6 +192,7 @@ func (w *FsWallet) IncrementUsage(a wallet.Address) {
 	w.save()
 }
 
+// DecrementUsage completements IncrementUsage().
 func (w *FsWallet) DecrementUsage(a wallet.Address) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
