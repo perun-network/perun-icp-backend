@@ -40,7 +40,11 @@ func (a Address) String() string {
 }
 
 func (a Address) Equal(b wallet.Address) bool {
-	return bytes.Equal(a[:], (*b.(*Address))[:])
+	b_, ok := b.(*Address)
+	if !ok {
+		return false
+	}
+	return bytes.Equal(a[:], (*b_)[:])
 }
 
 func (a Address) Cmp(b wallet.Address) int {
