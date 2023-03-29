@@ -158,7 +158,7 @@ func (w *FsWallet) Unlock(a wallet.Address) (wallet.Account, error) {
 	addr := *a.(*Address)
 	acc, ok := w.openAccs[string(addr[:])]
 	if !ok {
-		return nil, errors.New("No such account")
+		return nil, errors.New("no such account")
 	}
 
 	if acc.acc == nil {

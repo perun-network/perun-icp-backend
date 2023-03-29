@@ -20,6 +20,11 @@ func (a Account) Address() wallet.Address {
 	return &addr
 }
 
+func (a Account) ICPAddress() Address {
+	addr := Address(ed.PrivateKey(a).Public().(ed.PublicKey))
+	return addr
+}
+
 func (a Account) SignData(data []byte) ([]byte, error) {
 	return ed.PrivateKey(a).Sign(nil, data, crypto.Hash(0))
 }
