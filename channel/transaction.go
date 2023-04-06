@@ -247,16 +247,36 @@ func queryFundingCLI(queryFundingArgs DepositArgs, canID string, execPath string
 	return formattedOutput, nil
 }
 
-func QueryStateCLI(queryStateArgs DepositArgs, canID string, execPath string) error {
+func QueryCandidCLI(queryStateArgs string, canID string, execPath string) error {
 	// Query the state of the Perun canister
-	formatedQueryStateArgs := FormatQueryStateArgs(queryStateArgs.ChannelId)
+	//formatedQueryStateArgs := FormatQueryStateArgs(queryStateArgs.ChannelId)
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
 	}
 
-	txCmd := exec.Command(path, "canister", "call", canID, "query_state", formatedQueryStateArgs)
+	txCmd := exec.Command(path, "canister", "call", canID, "__get_candid_interface_tmp_hack", queryStateArgs)
+	txCmd.Dir = execPath
+	output, err := txCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
+	}
+
+	fmt.Printf("Queried candid after attempted deposit: %s", output)
+	return nil
+}
+
+func QueryStateCLI(queryStateArgs string, canID string, execPath string) error {
+	// Query the state of the Perun canister
+	//formatedQueryStateArgs := FormatQueryStateArgs(queryStateArgs.ChannelId)
+
+	path, err := exec.LookPath("dfx")
+	if err != nil {
+		return fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
+	}
+
+	txCmd := exec.Command(path, "canister", "call", canID, "query_state", queryStateArgs)
 	txCmd.Dir = execPath
 	output, err := txCmd.CombinedOutput()
 	if err != nil {
@@ -264,6 +284,27 @@ func QueryStateCLI(queryStateArgs DepositArgs, canID string, execPath string) er
 	}
 
 	fmt.Printf("Queried state after attempted deposit: %s", output)
+	return nil
+}
+
+
+func QueryEventsCLI(queryStateArgs string, canID string, execPath string) error {
+	// Query the state of the Perun canister
+	//formatedQueryStateArgs := FormatQueryStateArgs(queryStateArgs.ChannelId)
+
+	path, err := exec.LookPath("dfx")
+	if err != nil {
+		return fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
+	}
+
+	txCmd := exec.Command(path, "canister", "call", canID, "query_events", queryStateArgs)
+	txCmd.Dir = execPath
+	output, err := txCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to query canister events: %w\nOutput: %s", err, output)
+	}
+
+	fmt.Printf("Queried events after attempted deposit: %s", output)
 	return nil
 }
 
@@ -337,5 +378,6 @@ func depositFundMemPerunCLI(depositArgs DepositArgs, canID string, execPath stri
 	if err != nil {
 		return fmt.Errorf("failed to execute deposit command: %w\nOutput: %s", err, string(output))
 	}
+	fmt.Println("deposit_memo output: ", string(output))
 	return nil
 }

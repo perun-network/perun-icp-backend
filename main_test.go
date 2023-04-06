@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"perun.network/perun-icp-backend/channel"
 	"perun.network/perun-icp-backend/utils"
+	"regexp"
+	"errors"
 )
 
 const (
@@ -37,7 +39,7 @@ func TestPerunDeposit(t *testing.T) {
 	// start DFX and deploy the Ledger and the Perun canisters
 	dfx, err := setup.StartDeployDfx()
 	if err != nil {
-		t.Fatalf("StartDfxWithConfig() error: %v", err)
+		log.Fatalf("StartDfxWithConfig() error: %v", err)
 	}
 
 	log.Println("DFX started, Ledger and Perun canisters have been deployed.")
@@ -152,6 +154,51 @@ func handleUserFunding(t *testing.T, user *channel.UserClient, funding *channel.
 		t.Errorf("Error for handling the deposit: %v", err)
 		return err
 	}
+
+	fmt.Println("Deposit result: outputfundmemo, ", depositResult.OutputFundMemo, depositResult.FundingOutput, depositResult.ChannelAlloc)
+
+
+	r := regexp.MustCompile(`channel\s+=\s+blob\s+"(.*?)"`)
+
+	channelValue := ""
+	matches := r.FindStringSubmatch(depositResult.OutputFundMemo)
+	if len(matches) > 1 {
+		channelValue = matches[1]
+		channelValue = "(blob \"" + channelValue + "\")"
+		fmt.Println(channelValue)
+	} else {
+		err := errors.New("channel value not found")
+		fmt.Println(err.Error())
+	}
+
+	fmt.Println("channelValue: ", channelValue)
+
+	qsArgs := channel.DepositArgs{
+		ChannelId:   funding.ChannelId.ID,
+		Participant: user.L2Account.ICPAddress(),
+		Memo:        memoFunding,
+	}
+
+	fmt.Println("Query state args: ", qsArgs)
+
+	// err = channel.QueryStateCLI(qsArgs, perunID, execPath)
+	// if err != nil {
+	// 	t.Errorf("Error for querying the state: %v", err)
+	// 	return err
+	// }
+
+	// err = channel.QueryStateCLI(channelValue, perunID, execPath)
+	// if err != nil {
+	// 	t.Errorf("Error for querying channel events: %v", err)
+	// 	return err
+	// }
+
+	err = channel.QueryCandidCLI("()", perunID, execPath)
+	if err != nil {
+		t.Errorf("Error for querying candid: %v", err)
+		return err
+	}
+
 
 	// Ensure that we have deposited the exact amount to the Perun channel which we planned to do in the txArgs field.
 	require.Equal(t, txArgs.Amount, uint64(depositResult.ChannelAlloc), "The number of tokens available in the funded channel should be equal to the amount the user has initially transferred to the Perun Ledger address.")
