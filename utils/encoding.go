@@ -1,27 +1,28 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package utils
 
 // here we defien the encoding structure to use the candid package of the agent-go library
 
 import (
+	"fmt"
 	"github.com/aviate-labs/agent-go/principal"
-	"strconv"
-    "strings"
-    "fmt"
 	"regexp"
-
+	"strconv"
+	"strings"
 )
 
 // We encode the data according to the Motoko format as a vec{nat8} represenation
 
 func ByteToVecString(memo []byte) string {
-    var str string
-    for i, b := range memo {
-        str += strconv.Itoa(int(b))
-        if i < len(memo)-1 {
-            str += "; "
-        }
-    }
-    return "vec{" + str + "}"
+	var str string
+	for i, b := range memo {
+		str += strconv.Itoa(int(b))
+		if i < len(memo)-1 {
+			str += "; "
+		}
+	}
+	return "vec{" + str + "}"
 }
 
 func DecodePrincipal(principalString string) (principal.Principal, error) {
@@ -64,7 +65,7 @@ func FormatHex(hexStr string) string {
 func InsertBackslash(hash string) string {
 	modified := ""
 	for i := 0; i < len(hash); i++ {
-		if i % 2 == 0 {
+		if i%2 == 0 {
 			modified += "\\"
 		}
 		modified += string(hash[i])

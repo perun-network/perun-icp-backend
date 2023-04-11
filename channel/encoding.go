@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package channel
 
 import (
 	"fmt"
-	utils "perun.network/perun-icp-backend/utils"
 	"github.com/aviate-labs/agent-go/candid"
+	utils "perun.network/perun-icp-backend/utils"
 	"strings"
 )
 
@@ -28,7 +30,6 @@ func (f *Funding) SerializeFundingCandid() ([]byte, error) {
 	return enc, nil
 }
 
-
 func (f *Funding) SerializeFundingStandard() ([]byte, error) {
 	addrBytes, err := f.L2Address.MarshalBinary()
 
@@ -43,6 +44,7 @@ func (f *Funding) SerializeFundingStandard() ([]byte, error) {
 
 func (f *Funding) DeserializeFundingStandard(data []byte) error {
 	addrBytes := data[:len(data)-len(f.ChannelId.ID)]
+
 	err := f.L2Address.UnmarshalBinary(addrBytes)
 	if err != nil {
 		return err
@@ -57,9 +59,9 @@ func (f *Funding) DeserializeFundingStandard(data []byte) error {
 func DecodeArgs(args []byte) error {
 	fmt.Println("args to decode: ", args)
 	_, err := candid.DecodeValue(args)
-    if err != nil {
-        return fmt.Errorf("failed to decode args: %v", err)
-    }
+	if err != nil {
+		return fmt.Errorf("failed to decode args: %v", err)
+	}
 	return nil
 }
 
@@ -99,5 +101,5 @@ func FormatFidArgs(addr, chanId []byte) string {
 }
 
 func FormatFundingArgs(addr, chanId []byte) string {
-    return fmt.Sprintf("( record { channel = %s; participant = %s } )", utils.FormatVec(chanId), utils.FormatVec(addr))
+	return fmt.Sprintf("( record { channel = %s; participant = %s } )", utils.FormatVec(chanId), utils.FormatVec(addr))
 }

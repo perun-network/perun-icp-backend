@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package channel
 
 import (
@@ -23,7 +25,10 @@ type UserClient struct {
 }
 
 func (u UserClient) NewL2Account() (wallet.Account, error) {
-	wlt := wallet.NewRAMWallet(rand.Reader)
+	wlt, err := wallet.NewRAMWallet(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
 	acc := wlt.NewAccount()
 
 	return acc, nil

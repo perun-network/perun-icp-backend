@@ -1,22 +1,25 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package setup
 
 import (
 	"fmt"
-	"os/exec"
 	"os"
-	"time"
-	"perun.network/perun-icp-backend/channel"
+	"os/exec"
 	"path/filepath"
-
+	"perun.network/perun-icp-backend/channel"
+	"time"
 )
 
-var DfxTestParams = channel.DfxConfig{
-	Host: "http://127.0.0.1",
-	Port: 8000,
-	ExecPath: "./test/testdata/",
-	AccountPath: filepath.Join(setHomeDir(), ".config", "dfx", "identity", "minter", "identity.pem"),//"./.config/.dfx/identities/minter/identity.pem", // minter test identity generated with keysmith: https://github.com/dfinity/keysmith and imported with dfx 0.13.1
-}
+// "./.config/.dfx/identities/minter/identity.pem", // minter test identity generated with keysmith:
+// https://github.com/dfinity/keysmith and imported with dfx 0.13.1
 
+var DfxTestParams = channel.DfxConfig{
+	Host:        "http://127.0.0.1",
+	Port:        8000,
+	ExecPath:    "./test/testdata/",
+	AccountPath: filepath.Join(setHomeDir(), ".config", "dfx", "identity", "minter", "identity.pem"),
+}
 
 func setHomeDir() string {
 	homeDir, err := os.UserHomeDir()
@@ -25,7 +28,6 @@ func setHomeDir() string {
 	}
 	return homeDir
 }
-
 
 func StartDeployDfx() (*exec.Cmd, error) {
 	err := checkDFXInstallation()
@@ -119,7 +121,6 @@ func createLedgerArg() string {
 		ICP_PERUN_MINT_ACC, ICP_PERUN_USERA_ACC, ICP_PERUN_USERB_ACC,
 	)
 }
-
 
 func deployLedger(path, execPath, ledgerArg string) error {
 	fmt.Println("ledgerArg: ", ledgerArg)

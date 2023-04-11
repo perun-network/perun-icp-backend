@@ -1,17 +1,19 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package channel
 
 import (
 	"crypto/sha512"
 	"encoding/binary"
+
 	"errors"
 	"fmt"
-	"unsafe"
-	"math/rand"
 	"github.com/aviate-labs/agent-go/candid"
-	"perun.network/perun-icp-backend/wallet"
+	"math/rand"
 	utils "perun.network/perun-icp-backend/utils"
+	"perun.network/perun-icp-backend/wallet"
+	"unsafe"
 )
-
 
 type Params struct {
 	Nonce             []byte
@@ -33,9 +35,9 @@ func NewFunding() *Funding {
 }
 
 type DepositArgs struct {
-	ChannelId []byte
-	Participant wallet.Address 
-	Memo uint64
+	ChannelId   []byte
+	Participant wallet.Address
+	Memo        uint64
 }
 
 func (p *Params) SerializeParamsCandid() ([]byte, error) {
@@ -63,8 +65,6 @@ func (p *Params) SerializeParamsCandid() ([]byte, error) {
 	}
 	return enc, nil
 }
-
-
 
 func (p *Params) SerializeParams() ([]byte, error) {
 	paramsBytes := []byte{}

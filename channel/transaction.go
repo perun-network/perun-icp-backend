@@ -1,15 +1,17 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package channel
 
 import (
 	"fmt"
-	"os/exec"
-	"strconv"
-	"strings"
-	"regexp"
 	"github.com/aviate-labs/agent-go/candid"
 	"github.com/aviate-labs/agent-go/principal"
-	"perun.network/perun-icp-backend/wallet"
+	"os/exec"
 	utils "perun.network/perun-icp-backend/utils"
+	"perun.network/perun-icp-backend/wallet"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 // For the time being, we omit the subaccount and the timestamp
@@ -29,8 +31,8 @@ type NotifyArgs struct {
 
 // Queries the ledger for the funding properties of a channel
 type QueryArgs struct {
-	ChannelId []byte
-	Participant wallet.Address 
+	ChannelId   []byte
+	Participant wallet.Address
 }
 
 // Defines the recipient of the fund transfer
@@ -55,8 +57,6 @@ func transferDfxCLI(txArgs TxArgs, canID string, execPath string) (string, error
 	fmt.Printf("Response after transfer: %s\n", output)
 	return string(output), nil
 }
-
-
 
 func (u *UserClient) TransferDfx(txArgs TxArgs, transferTo Recipient) error {
 
@@ -168,48 +168,48 @@ func (u *UserClient) notifyDfx(notifyArgs NotifyArgs, notifyTo Recipient) (strin
 
 }
 func QueryFidCLI(queryFidArgs DepositArgs, canID string, execPath string) (fid uint64, err error) {
-    // Query the state of the Perun canister
+	// Query the state of the Perun canister
 
 	addr, err := queryFidArgs.Participant.MarshalBinary()
 	if err != nil {
 		fmt.Println("Error: ", err)
 	}
 
-    formatedQueryFidArgs := FormatFidArgs(addr, queryFidArgs.ChannelId)
+	formatedQueryFidArgs := FormatFidArgs(addr, queryFidArgs.ChannelId)
 
-    path, err := exec.LookPath("dfx")
-    if err != nil {
-        return 0, fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
-    }
+	path, err := exec.LookPath("dfx")
+	if err != nil {
+		return 0, fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
+	}
 
-    txCmd := exec.Command(path, "canister", "call", canID, "query_fid", formatedQueryFidArgs)
-    txCmd.Dir = execPath
-    output, err := txCmd.CombinedOutput()
+	txCmd := exec.Command(path, "canister", "call", canID, "query_fid", formatedQueryFidArgs)
+	txCmd.Dir = execPath
+	output, err := txCmd.CombinedOutput()
 
 	fmt.Println("Fid Output: ", string(output))
 
-    if err != nil {
-        return 0, fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
-    }
+	if err != nil {
+		return 0, fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
+	}
 
-    // Use regular expression to extract the nat64 value
-    re := regexp.MustCompile(`\((\d{1,3}(?:_\d{3})*\d*) : nat64\)`)
-    matches := re.FindStringSubmatch(string(output))
+	// Use regular expression to extract the nat64 value
+	re := regexp.MustCompile(`\((\d{1,3}(?:_\d{3})*\d*) : nat64\)`)
+	matches := re.FindStringSubmatch(string(output))
 
-    if len(matches) < 2 {
-        return 0, fmt.Errorf("failed to extract nat64 value from the output")
-    }
+	if len(matches) < 2 {
+		return 0, fmt.Errorf("failed to extract nat64 value from the output")
+	}
 
-    // Remove underscores from the matched string
-    withoutUnderscores := strings.ReplaceAll(matches[1], "_", "")
+	// Remove underscores from the matched string
+	withoutUnderscores := strings.ReplaceAll(matches[1], "_", "")
 
-    // Parse the nat64 value as uint64
-    memo, err := strconv.ParseUint(withoutUnderscores, 10, 64)
-    if err != nil {
-        return 0, fmt.Errorf("failed to parse the memo value as uint64: %w", err)
-    }
+	// Parse the nat64 value as uint64
+	memo, err := strconv.ParseUint(withoutUnderscores, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse the memo value as uint64: %w", err)
+	}
 
-    return memo, nil
+	return memo, nil
 }
 
 func queryFundingCLI(queryFundingArgs DepositArgs, canID string, execPath string) (string, error) {
@@ -286,7 +286,6 @@ func QueryStateCLI(queryStateArgs string, canID string, execPath string) error {
 	fmt.Printf("Queried state after attempted deposit: %s", output)
 	return nil
 }
-
 
 func QueryEventsCLI(queryStateArgs string, canID string, execPath string) error {
 	// Query the state of the Perun canister

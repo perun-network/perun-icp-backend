@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -37,14 +38,17 @@ type openAcc struct {
 var bo = binary.LittleEndian
 
 // NewRAMWallet creates an unpersisted FsWallet.
-func NewRAMWallet(gen io.Reader) *FsWallet {
+func NewRAMWallet(gen io.Reader) (*FsWallet, error) {
 	w := FsWallet{
 		openAccs: make(map[string]*openAcc),
 	}
 
-	io.ReadFull(gen, w.seed[:])
+	_, err := io.ReadFull(gen, w.seed[:])
+	if err != nil {
+		return nil, fmt.Errorf("error reading random seed: %v", err)
+	}
 
-	return &w
+	return &w, nil
 }
 
 // CreateOrLoadFsWallet loads the wallet from the requested path, otherwise, it
@@ -109,12 +113,29 @@ func (w *FsWallet) save() error {
 
 	file := new(bytes.Buffer)
 	file.Write(w.seed[:])
-	binary.Write(file, bo, w.latestAcc)
-	binary.Write(file, bo, uint32(len(w.openAccs)))
+
+	err := binary.Write(file, bo, w.latestAcc)
+	if err != nil {
+		return fmt.Errorf("error writing latestAcc: %v", err)
+	}
+
+	err = binary.Write(file, bo, uint32(len(w.openAccs)))
+	if err != nil {
+		return fmt.Errorf("error writing openAccs length: %v", err)
+	}
+
 	for pk, acc := range w.openAccs {
 		file.Write([]byte(pk))
-		binary.Write(file, bo, acc.nonce)
-		binary.Write(file, bo, acc.useCount)
+
+		err = binary.Write(file, bo, acc.nonce)
+		if err != nil {
+			return fmt.Errorf("error writing nonce for account %s: %v", pk, err)
+		}
+
+		err = binary.Write(file, bo, acc.useCount)
+		if err != nil {
+			return fmt.Errorf("error writing useCount for account %s: %v", pk, err)
+		}
 	}
 
 	return os.WriteFile(w.file, file.Bytes(), 0644)
@@ -123,7 +144,11 @@ func (w *FsWallet) save() error {
 func (w *FsWallet) genAcc(id uint64) Account {
 	seed := new(bytes.Buffer)
 	seed.Write(w.seed[:])
-	binary.Write(seed, bo, id)
+
+	err := binary.Write(seed, bo, id)
+	if err != nil {
+		panic(fmt.Sprintf("error writing id to seed buffer: %v", err))
+	}
 
 	_, sk, err := ed.GenerateKey(seed)
 	if err != nil {
@@ -186,10 +211,14 @@ func (w *FsWallet) IncrementUsage(a wallet.Address) {
 	defer w.mutex.Unlock()
 	acc, ok := w.openAccs[string(*a.(*Address))]
 	if !ok {
-		panic("IncrementUsage: account not found!")
+		fmt.Printf("IncrementUsage: account not found")
+		return
 	}
 	acc.useCount++
-	w.save()
+
+	if err := w.save(); err != nil {
+		fmt.Printf("Error in IncrementUsage during save: %v", err)
+	}
 }
 
 // DecrementUsage completements IncrementUsage().
@@ -199,15 +228,20 @@ func (w *FsWallet) DecrementUsage(a wallet.Address) {
 	key := string(*a.(*Address))
 	acc, ok := w.openAccs[key]
 	if !ok {
-		panic("IncrementUsage: account not found!")
+		fmt.Printf("IncrementUsage: account not found!")
+		return
 	}
 	if acc.useCount == 0 {
-		panic("DecrementUsage: unused account!")
+		fmt.Printf("DecrementUsage: unused account!")
+		return
 	}
 	acc.useCount--
 	if acc.useCount == 0 {
 		acc.acc.clear()
 		delete(w.openAccs, key)
 	}
-	w.save()
+
+	if err := w.save(); err != nil {
+		fmt.Printf("Error in DecrementUsage during save: %v", err)
+	}
 }

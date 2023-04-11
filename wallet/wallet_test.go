@@ -3,6 +3,7 @@
 package wallet
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -13,12 +14,21 @@ import (
 	ptest "polycry.pt/poly-go/test"
 )
 
-func setup(rng io.Reader) *test.Setup {
-	w := NewRAMWallet(rng)
-	marshalledAddr, err := NewRAMWallet(rng).NewAccount().Address().MarshalBinary()
+func setup(rng io.Reader) (*test.Setup, error) {
+	w, err := NewRAMWallet(rng)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error creating wallet: %v", err)
 	}
+
+	newWallet, err := NewRAMWallet(rng)
+	if err != nil {
+		return nil, fmt.Errorf("error creating newWallet: %v", err)
+	}
+	marshalledAddr, err := newWallet.NewAccount().Address().MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling address: %v", err)
+	}
+
 	zero := make(Address, ed.PublicKeySize)
 	return &test.Setup{
 		Backend:           Backend{},
@@ -26,17 +36,31 @@ func setup(rng io.Reader) *test.Setup {
 		AddressInWallet:   w.NewAccount().Address(),
 		ZeroAddress:       &zero,
 		AddressMarshalled: marshalledAddr,
-	}
+	}, nil
 }
 
 func TestAddress(t *testing.T) {
-	test.TestAddress(t, setup(ptest.Prng(t)))
+	setupResult, err := setup(ptest.Prng(t))
+	if err != nil {
+		t.Fatalf("Error in setup: %v", err)
+	}
+	test.TestAddress(t, setupResult)
 }
+
 func TestGenericSignatureSize(t *testing.T) {
-	test.GenericSignatureSizeTest(t, setup(ptest.Prng(t)))
+	setupResult, err := setup(ptest.Prng(t))
+	if err != nil {
+		t.Fatalf("Error in setup: %v", err)
+	}
+	test.GenericSignatureSizeTest(t, setupResult)
 }
+
 func TestAccountWithWalletAndBackend(t *testing.T) {
-	test.TestAccountWithWalletAndBackend(t, setup(ptest.Prng(t)))
+	setupResult, err := setup(ptest.Prng(t))
+	if err != nil {
+		t.Fatalf("Error in setup: %v", err)
+	}
+	test.TestAccountWithWalletAndBackend(t, setupResult)
 }
 
 func TestFsWallet(t *testing.T) {
