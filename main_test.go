@@ -5,27 +5,32 @@ package main_test
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"log"
 	"math/rand"
+	"regexp"
+	"testing"
+	"time"
+
+	_ "github.com/aviate-labs/agent-go/ledger"
+	"github.com/aviate-labs/agent-go/principal"
+	"github.com/stretchr/testify/require"
 	"perun.network/perun-icp-backend/channel"
 	"perun.network/perun-icp-backend/setup"
 	"perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
-	"regexp"
-	"testing"
-	"time"
 )
 
 const (
-	perunID            = "r7inp-6aaaa-aaaaa-aaabq-cai"
-	ledgerID           = "rrkah-fqaaa-aaaaa-aaaaq-cai"
-	userAFundingAmount = 40000
-	userBFundingAmount = 60000
-	noFee              = 0
+	perunID                   = "r7inp-6aaaa-aaaaa-aaabq-cai"
+	ledgerID                  = "rrkah-fqaaa-aaaaa-aaaaq-cai"
+	userAFundingAmount        = 40000
+	userBFundingAmount uint64 = 60000
+	noFee                     = 0
 )
 
 func TestPerunDeposit(t *testing.T) {
+
+	fmt.Println("Starting test: TestPerunDeposit()")
 
 	testConfig := setup.DfxTestParams
 
@@ -34,9 +39,13 @@ func TestPerunDeposit(t *testing.T) {
 		t.Errorf("DecodePrincipal() error: %v", err)
 	}
 
+	recipLedgerID, err := utils.DecodePrincipal(ledgerID)
+	if err != nil {
+		t.Errorf("DecodePrincipal() error: %v", err)
+	}
+
 	recipientPerun := channel.Recipient{ID: recipPerunID}
-	var input [32]byte
-	recipPerunAcc := recipientPerun.ID.AccountIdentifier(input)
+	recipPerunAcc := recipientPerun.ID.AccountIdentifier(principal.DefaultSubAccount)
 
 	// start DFX and deploy the Ledger and the Perun canisters
 	dfx, err := setup.StartDeployDfx()
@@ -47,12 +56,12 @@ func TestPerunDeposit(t *testing.T) {
 	log.Println("DFX started, Ledger and Perun canisters have been deployed.")
 
 	// initalize Perun users
-	userClientA, err := channel.NewUserClient(testConfig)
+	userClientA, err := channel.NewUserClient(testConfig, recipLedgerID)
 	if err != nil {
 		log.Fatalf("Error creating user A client: %v", err)
 	}
 
-	userClientB, err := channel.NewUserClient(testConfig)
+	userClientB, err := channel.NewUserClient(testConfig, recipPerunID)
 	if err != nil {
 		log.Fatalf("Error creating user B client: %v", err)
 	}
@@ -85,6 +94,8 @@ func TestPerunDeposit(t *testing.T) {
 	}
 
 	// Tx arguments to transfer funds to the channel
+
+	//subAccDefault := ledger.SubAccount(principal.DefaultSubAccount)
 	txArgsList := []channel.TxArgs{
 		{
 			Amount: userAFundingAmount,
@@ -97,9 +108,43 @@ func TestPerunDeposit(t *testing.T) {
 			To:     recipPerunAcc.String(),
 		},
 	}
+	// We wil use this definition as soon as the error in the TransferDfx function is understood
+	// txArgsList := []ledger.TransferArgs{
+	// 	{
+	// 		Memo:           0,
+	// 		Amount:         ledger.Tokens{E8S: userAFundingAmount},
+	// 		Fee:            ledger.Tokens{E8S: noFee},
+	// 		FromSubAccount: &subAccDefault,
+	// 		To:             recipPerunAcc,
+	// 		CreatedAtTime: &ledger.TimeStamp{
+	// 			TimestampNanos: uint64(time.Now().UnixNano()),
+	// 		},
+	// 	},
+	// 	{
+	// 		Memo:           0,
+	// 		Amount:         ledger.Tokens{E8S: userBFundingAmount},
+	// 		Fee:            ledger.Tokens{E8S: noFee},
+	// 		FromSubAccount: &subAccDefault,
+	// 		To:             recipPerunAcc,
+	// 		CreatedAtTime: &ledger.TimeStamp{
+	// 			TimestampNanos: uint64(time.Now().UnixNano()),
+	// 		},
+	// 	},
+	// }
 
 	for i, user := range users {
-		err := handleUserFunding(t, user, fundingList[i], txArgsList[i], ledgerID, testConfig.ExecPath, recipientPerun, i)
+
+		params := HandleUserFundingParams{
+			T:              t,
+			User:           user,
+			Funding:        fundingList[i],
+			TxArgs:         txArgsList[i],
+			LedgerID:       ledgerID,
+			ExecPath:       testConfig.ExecPath,
+			RecipientPerun: recipientPerun,
+			I:              i,
+		}
+		err := handleUserFunding(params)
 		if err != nil {
 			t.Fatalf("handleUserFunding failed: %v", err)
 		}
@@ -115,44 +160,56 @@ func TestPerunDeposit(t *testing.T) {
 
 }
 
-func handleUserFunding(t *testing.T, user *channel.UserClient, funding *channel.Funding, txArgs channel.TxArgs, ledgerID, execPath string, recipientPerun channel.Recipient, i int) error {
-	// Retrieve memo from funding.
-	// Memo hashes the funding struct, providing a unique identification of transfers targeted to fund Perun channels.
-	memoFunding, err := funding.Memo()
+type HandleUserFundingParams struct {
+	T              *testing.T
+	User           *channel.UserClient
+	Funding        *channel.Funding
+	TxArgs         channel.TxArgs //ledger.TransferArgs
+	LedgerID       string
+	ExecPath       string
+	RecipientPerun channel.Recipient
+	I              int
+}
+
+func handleUserFunding(params HandleUserFundingParams) error {
+	memoFunding, err := params.Funding.Memo()
+
 	if err != nil {
-		t.Errorf("Error for retrieving the memo: %v", err)
+		params.T.Errorf("Error for retrieving the memo: %v", err)
 		return err
 	}
 
 	// Set memo in transaction arguments. This user-specific identifier identifies the funds tied to a user to the Perun channel.
-	txArgs.Memo = memoFunding
+	params.TxArgs.Memo = memoFunding
 
 	// Execute DFX transfer to the ICP Ledger using the Memo to make the transfer identifiable
-	blockValue, err := channel.ExecuteDFXTransfer(txArgs, ledgerID, execPath)
+	//blockValue, err := channel.ExecuteDFXTransfer(params.User, params.TxArgs, ledgerID)
+	blockValue, err := channel.ExecuteDFXTransfer(params.TxArgs, params.LedgerID, params.ExecPath)
+
 	if err != nil {
 		log.Printf("Error querying blocks: %v", err)
 		return err
 	}
 
 	userLabel := "A"
-	if i == 1 {
+	if params.I == 1 {
 		userLabel = "B"
 	}
 	log.Printf("Transfer of user %s to the Perun ICP Ledger has been validated in block %d.", userLabel, blockValue)
 
 	// Notify Perun about the transfer by looking for the specific memoFunding in the block in which the above transfer has been issued
-	fundedValue, err := channel.NotifyTransferToPerun(user, blockValue, recipientPerun)
+	fundedValue, err := channel.NotifyTransferToPerun(params.User, blockValue, params.RecipientPerun)
 	if err != nil {
-		t.Errorf("Error during notification of the funded value: %v", err)
+		params.T.Errorf("Error during notification of the funded value: %v", err)
 		return err
 	}
-	require.Equal(t, txArgs.Amount, uint64(fundedValue), "The value we transfer should be the same value we get the transaction notification for the user")
+	require.Equal(params.T, params.TxArgs.Amount, uint64(fundedValue), "The value we transfer should be the same value we get the transaction notification for the user")
 	log.Printf("The Perun canister received %d tokens from user %s.", fundedValue, userLabel)
 
 	// Deposit to Perun channel by draining the funds from the ICP ledger identified by the unique, channel- and user-specific memoFunding
-	depositResult, err := channel.DepositToPerunChannel(user, funding, memoFunding, perunID, execPath)
+	depositResult, err := channel.DepositToPerunChannel(params.User, params.Funding, memoFunding, perunID, params.ExecPath)
 	if err != nil {
-		t.Errorf("Error for handling the deposit: %v", err)
+		params.T.Errorf("Error for handling the deposit: %v", err)
 		return err
 	}
 
@@ -174,8 +231,8 @@ func handleUserFunding(t *testing.T, user *channel.UserClient, funding *channel.
 	fmt.Println("channelValue: ", channelValue)
 
 	qsArgs := channel.DepositArgs{
-		ChannelId:   funding.ChannelId.ID,
-		Participant: user.L2Account.ICPAddress(),
+		ChannelId:   params.Funding.ChannelId.ID,
+		Participant: params.User.L2Account.ICPAddress(),
 		Memo:        memoFunding,
 	}
 
@@ -193,16 +250,16 @@ func handleUserFunding(t *testing.T, user *channel.UserClient, funding *channel.
 	// 	return err
 	// }
 
-	err = channel.QueryCandidCLI("()", perunID, execPath)
+	err = channel.QueryCandidCLI("()", perunID, params.ExecPath)
 	if err != nil {
-		t.Errorf("Error for querying candid: %v", err)
+		params.T.Errorf("Error for querying candid: %v", err)
 		return err
 
 	}
 
 	// Ensure that we have deposited the exact amount to the Perun channel which we planned to do in the txArgs field.
-	require.Equal(t, txArgs.Amount, uint64(depositResult.ChannelAlloc), "The number of tokens available in the funded channel should be equal to the amount the user has initially transferred to the Perun Ledger address.")
-	log.Printf("The Perun canister has deposited %d tokens from user %s into the channel %x: ", depositResult.ChannelAlloc, userLabel, funding.ChannelId)
+	require.Equal(params.T, params.TxArgs.Amount, uint64(depositResult.ChannelAlloc), "The number of tokens available in the funded channel should be equal to the amount the user has initially transferred to the Perun Ledger address.")
+	log.Printf("The Perun canister has deposited %d tokens from user %s into the channel %x: ", depositResult.ChannelAlloc, userLabel, params.Funding.ChannelId)
 
 	return nil
 }

@@ -17,12 +17,12 @@ func (f *Funding) SerializeFundingCandid() ([]byte, error) {
 
 	fullArg := fmt.Sprintf("( record { channel = %s; participant = %s })", utils.FormatVec(f.ChannelId.ID), utils.FormatVec(addr))
 
-	enc, err := candid.EncodeValue(fullArg)
+	enc, err := candid.EncodeValueString(fullArg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode Funding as Candid value: %w", err)
 	}
 
-	_, err = candid.DecodeValue(enc)
+	_, err = candid.DecodeValueString(enc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode encoded Funding Candid value: %w", err)
 	}
@@ -58,7 +58,7 @@ func (f *Funding) DeserializeFundingStandard(data []byte) error {
 
 func DecodeArgs(args []byte) error {
 	fmt.Println("args to decode: ", args)
-	_, err := candid.DecodeValue(args)
+	_, err := candid.DecodeValueString(args)
 	if err != nil {
 		return fmt.Errorf("failed to decode args: %v", err)
 	}

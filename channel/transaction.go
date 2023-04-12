@@ -5,6 +5,7 @@ package channel
 import (
 	"fmt"
 	"github.com/aviate-labs/agent-go/candid"
+	"github.com/aviate-labs/agent-go/ledger"
 	"github.com/aviate-labs/agent-go/principal"
 	"os/exec"
 	utils "perun.network/perun-icp-backend/utils"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // For the time being, we omit the subaccount and the timestamp
@@ -40,6 +42,36 @@ type Recipient struct {
 	ID principal.Principal
 }
 
+func MakeTransferArgs(memo uint64, amount uint64, fee uint64, recipient string) ledger.TransferArgs {
+	p, _ := principal.Decode(recipient)
+	subAccount := ledger.SubAccount(principal.DefaultSubAccount)
+
+	return ledger.TransferArgs{
+		Memo: memo,
+		Amount: ledger.Tokens{
+			E8S: amount,
+		},
+		Fee: ledger.Tokens{
+			E8S: fee,
+		},
+		FromSubAccount: &subAccount,
+		To:             p.AccountIdentifier(principal.DefaultSubAccount),
+		CreatedAtTime: &ledger.TimeStamp{
+			TimestampNanos: uint64(time.Now().UnixNano()),
+		},
+	}
+}
+
+func (u *UserClient) TransferDfx(txArgs ledger.TransferArgs, recipient string) (uint64, error) {
+
+	tokens, err := u.Ledger.Transfer(txArgs)
+	if err != nil {
+		return 0, fmt.Errorf("failed to transfer tokens: %w", err)
+	}
+
+	return *tokens, nil
+}
+
 func transferDfxCLI(txArgs TxArgs, canID string, execPath string) (string, error) {
 	formatedTransferArgs := FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, txArgs.To)
 	path, err := exec.LookPath("dfx")
@@ -58,28 +90,28 @@ func transferDfxCLI(txArgs TxArgs, canID string, execPath string) (string, error
 	return string(output), nil
 }
 
-func (u *UserClient) TransferDfx(txArgs TxArgs, transferTo Recipient) error {
+// func (u *UserClient) TransferDfxOLD(txArgs TxArgs, transferTo Recipient) error {
 
-	formatedTransferArgs := FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, txArgs.To)
-	encodedTxArgs, err := candid.EncodeValue(formatedTransferArgs)
-	if err != nil {
-		return fmt.Errorf("failed to encode transaction arguments: %w", err)
-	}
-	err = DecodeArgs(encodedTxArgs)
+// 	formatedTransferArgs := FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, txArgs.To)
+// 	encodedTxArgs, err := candid.EncodeValueString(formatedTransferArgs)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to encode transaction arguments: %w", err)
+// 	}
+// 	err = DecodeArgs(encodedTxArgs)
 
-	fmt.Println("Encoded TxArgs: ", encodedTxArgs)
-	if err != nil {
-		return fmt.Errorf("failed to decode transaction arguments: %w", err)
-	}
-	respQS, err := u.Agent.Call(transferTo.ID, "transfer", encodedTxArgs)
+// 	fmt.Println("Encoded TxArgs: ", encodedTxArgs)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to decode transaction arguments: %w", err)
+// 	}
+// 	respQS, err := u.Agent.Call(transferTo.ID, "transfer", encodedTxArgs)
 
-	if err != nil {
-		return fmt.Errorf("failed to call transfer method: %w", err)
-	}
+// 	if err != nil {
+// 		return fmt.Errorf("failed to call transfer method: %w", err)
+// 	}
 
-	fmt.Println("Sent transaction to ledger with response: ", respQS)
-	return nil
-}
+// 	fmt.Println("Sent transaction to ledger with response: ", respQS)
+// 	return nil
+// }
 
 func (u *UserClient) QueryFunding(fundingArgs DepositArgs, queryAt Recipient) error {
 	// here we query the Perun Canister for the funding arguments which we send
@@ -90,14 +122,14 @@ func (u *UserClient) QueryFunding(fundingArgs DepositArgs, queryAt Recipient) er
 	}
 
 	formatedFundingArgs := FormatFundingArgs(addr, fundingArgs.ChannelId)
-	encodedQueryFundingArgs, err := candid.EncodeValue(formatedFundingArgs)
+	encodedQueryFundingArgs, err := candid.EncodeValueString(formatedFundingArgs)
 	fmt.Println("Encoded QueryFunding Args: ", encodedQueryFundingArgs)
 
 	if err != nil {
 		return fmt.Errorf("failed to encode query funding arguments: %w", err)
 	}
 
-	respQuery, err := u.Agent.Call(queryAt.ID, "query_funding_only", encodedQueryFundingArgs)
+	respQuery, err := u.Agent.CallString(queryAt.ID, "query_funding_only", encodedQueryFundingArgs) //Call(queryAt.ID, "query_funding_only", encodedQueryFundingArgs)
 	if err != nil {
 		return fmt.Errorf("failed to call query state method: %w", err)
 	}
@@ -110,14 +142,14 @@ func (u *UserClient) QueryFunding(fundingArgs DepositArgs, queryAt Recipient) er
 func (u *UserClient) QueryState(queryStateArgs DepositArgs, queryAt Recipient) error {
 	formatedQueryStateArgs := FormatQueryStateArgs(queryStateArgs.ChannelId)
 
-	encodedQueryStateArgs, err := candid.EncodeValue(formatedQueryStateArgs)
+	encodedQueryStateArgs, err := candid.EncodeValueString(formatedQueryStateArgs)
 	fmt.Println("Encoded QueryStateArgs: ", encodedQueryStateArgs)
 
 	if err != nil {
 		return fmt.Errorf("failed to encode query state argument: %w", err)
 	}
 
-	respQuery, err := u.Agent.Call(queryAt.ID, "query_state", encodedQueryStateArgs)
+	respQuery, err := u.Agent.CallString(queryAt.ID, "query_state", encodedQueryStateArgs)
 	if err != nil {
 		return fmt.Errorf("failed to call query state method: %w", err)
 	}
@@ -131,13 +163,13 @@ func (u *UserClient) QueryMemo(memoArg uint64, queryAt Recipient) (string, error
 
 	memoString := fmt.Sprintf("(%d : nat64)", memoArg)
 	fmt.Println("memoString: ", memoString)
-	encodedQueryMemoArgs, err := candid.EncodeValue(memoString)
+	encodedQueryMemoArgs, err := candid.EncodeValueString(memoString)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to encode query fid argument: %w", err)
 	}
 
-	respQuery, err := u.Agent.Call(queryAt.ID, "query_memo", encodedQueryMemoArgs)
+	respQuery, err := u.Agent.CallString(queryAt.ID, "query_memo", encodedQueryMemoArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to call query memo method: %w", err)
 	}
@@ -151,13 +183,13 @@ func (u *UserClient) notifyDfx(notifyArgs NotifyArgs, notifyTo Recipient) (strin
 	// Notification of token transfer to the Perun canister
 
 	formatedNotifyArgs := utils.FormatNotifyArgs(notifyArgs.Blocknum)
-	encodedNotifyArgs, err := candid.EncodeValue(formatedNotifyArgs)
+	encodedNotifyArgs, err := candid.EncodeValueString(formatedNotifyArgs)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to encode notification arguments: %w", err)
 	}
 
-	respNote, err := u.Agent.Call(notifyTo.ID, "transaction_notification", encodedNotifyArgs)
+	respNote, err := u.Agent.CallString(notifyTo.ID, "transaction_notification", encodedNotifyArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to call notify method: %w", err)
 	}

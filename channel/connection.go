@@ -4,7 +4,9 @@ package channel
 
 import (
 	"fmt"
+	//"github.com/aviate-labs/agent-go/ledger"
 	utils "perun.network/perun-icp-backend/utils"
+
 	"strings"
 )
 
@@ -21,6 +23,20 @@ func ExecuteDFXTransfer(txArgs TxArgs, ledgerID, execPath string) (uint64, error
 
 	return blockNum, nil
 }
+
+// func ExecuteDFXTransfer(user *UserClient, txArgs ledger.TransferArgs, ledgerID string) (uint64, error) {
+// 	blockNum, err := user.TransferDfx(txArgs, ledgerID)
+// 	if err != nil {
+// 		return 0, fmt.Errorf("error for first DFX transfer: %v", err)
+// 	}
+
+// 	// blockNum, err := utils.ExtractBlock(transferFirstOutput)
+// 	// if err != nil {
+// 	// 	return 0, fmt.Errorf("error querying blocks: %v", err)
+// 	// }
+
+// 	return blockNum, nil
+// }
 
 func NotifyTransferToPerun(user *UserClient, blockNum uint64, recipientPerun Recipient) (uint64, error) {
 	notifyArgs := NotifyArgs{Blocknum: blockNum}

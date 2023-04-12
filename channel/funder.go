@@ -55,11 +55,11 @@ func (p *Params) SerializeParamsCandid() ([]byte, error) {
 
 	paramsMotokoArgs = paramsMotokoArgs + paramsNonce + ParamsParts + paramsChallDuration
 
-	enc, err := candid.EncodeValue(paramsMotokoArgs)
+	enc, err := candid.EncodeValueString(paramsMotokoArgs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode params as Candid: %w", err)
 	}
-	_, err = candid.DecodeValue(enc)
+	_, err = candid.DecodeValueString(enc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode encoded params Candid: %w", err)
 	}
