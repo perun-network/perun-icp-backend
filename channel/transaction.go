@@ -319,26 +319,6 @@ func QueryStateCLI(queryStateArgs string, canID string, execPath string) error {
 	return nil
 }
 
-func QueryEventsCLI(queryStateArgs string, canID string, execPath string) error {
-	// Query the state of the Perun canister
-	//formatedQueryStateArgs := FormatQueryStateArgs(queryStateArgs.ChannelId)
-
-	path, err := exec.LookPath("dfx")
-	if err != nil {
-		return fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
-	}
-
-	txCmd := exec.Command(path, "canister", "call", canID, "query_events", queryStateArgs)
-	txCmd.Dir = execPath
-	output, err := txCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to query canister events: %w\nOutput: %s", err, output)
-	}
-
-	fmt.Printf("Queried events after attempted deposit: %s", output)
-	return nil
-}
-
 func queryHoldingsCLI(queryArgs DepositArgs, canID string, execPath string) (string, error) {
 	addr, err := queryArgs.Participant.MarshalBinary()
 	if err != nil {
@@ -386,7 +366,6 @@ func queryFundingMemoCLI(depositArgs DepositArgs, canID string, execPath string)
 		return "", fmt.Errorf("failed to query canister funding memo: %w\nOutput: %s", err, output)
 	}
 
-	fmt.Printf("Funding and Memo define the Deposit identifier (Memo) and unique Channel ID with the querying participant: %s", output)
 	return string(output), nil
 }
 

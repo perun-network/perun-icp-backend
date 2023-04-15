@@ -92,6 +92,18 @@ func FormatFundingMemoArgs(addr, chanId []byte, memo uint64) string {
 	return builder.String()
 }
 
+func FormatChanTimeArgs(chanId []byte, tstamp uint64) string {
+	var builder strings.Builder
+
+	builder.WriteString(fmt.Sprintf(
+		"(record {chanid = %s;  time = %d : nat64 })",
+		utils.FormatVec(chanId),
+		tstamp,
+	))
+
+	return builder.String()
+}
+
 func FormatQueryStateArgs(chanId []byte) string {
 	return fmt.Sprintf("(%s)", utils.FormatVec(chanId))
 }

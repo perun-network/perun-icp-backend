@@ -102,7 +102,6 @@ func NewAgent(config DfxConfig) (*agent.Agent, error) {
 		return nil, err
 	}
 	ic0, err := url.Parse(fmt.Sprintf("%s:%d", config.Host, config.Port))
-	fmt.Println("ic0: ", ic0)
 	if err != nil {
 		return nil, err
 	}

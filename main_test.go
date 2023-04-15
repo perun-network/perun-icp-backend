@@ -23,8 +23,8 @@ import (
 const (
 	perunID                   = "r7inp-6aaaa-aaaaa-aaabq-cai"
 	ledgerID                  = "rrkah-fqaaa-aaaaa-aaaaq-cai"
-	userAFundingAmount        = 40000
-	userBFundingAmount uint64 = 60000
+	userAFundingAmount        = 400000
+	userBFundingAmount uint64 = 6000
 	noFee                     = 0
 )
 
@@ -178,6 +178,7 @@ func handleUserFunding(params HandleUserFundingParams) error {
 		params.T.Errorf("Error for retrieving the memo: %v", err)
 		return err
 	}
+	tstamp := 0 //time.Now().UnixNano()
 
 	// Set memo in transaction arguments. This user-specific identifier identifies the funds tied to a user to the Perun channel.
 	params.TxArgs.Memo = memoFunding
@@ -230,23 +231,16 @@ func handleUserFunding(params HandleUserFundingParams) error {
 
 	fmt.Println("channelValue: ", channelValue)
 
-	qsArgs := channel.DepositArgs{
-		ChannelId:   params.Funding.ChannelId.ID,
-		Participant: params.User.L2Account.ICPAddress(),
-		Memo:        memoFunding,
-	}
-
-	fmt.Println("Query state args: ", qsArgs)
-
-	// err = channel.QueryStateCLI(qsArgs, perunID, execPath)
-	// if err != nil {
-	// 	t.Errorf("Error for querying the state: %v", err)
-	// 	return err
+	// qsArgs := channel.DepositArgs{
+	// 	ChannelId:   params.Funding.ChannelId.ID,
+	// 	Participant: params.User.L2Account.ICPAddress(),
+	// 	Memo:        memoFunding,
 	// }
+	//fmt.Println("Query state args: ", qsArgs)
 
-	// err = channel.QueryStateCLI(channelValue, perunID, execPath)
+	// err = channel.QueryStateCLI(qsArgs, perunID, params.ExecPath)
 	// if err != nil {
-	// 	t.Errorf("Error for querying channel events: %v", err)
+	// 	params.T.Errorf("Error for querying the state: %v", err)
 	// 	return err
 	// }
 
@@ -256,6 +250,25 @@ func handleUserFunding(params HandleUserFundingParams) error {
 		return err
 
 	}
+
+	err = channel.QueryStateCLI(channelValue, perunID, params.ExecPath)
+	if err != nil {
+		params.T.Errorf("Error for querying channel events: %v", err)
+		return err
+	}
+
+	fmt.Println("Timestamp: ", tstamp)
+	qEventsArgs := channel.FormatChanTimeArgs(params.Funding.ChannelId.ID, uint64(tstamp))
+
+	fmt.Println("Query events args: ", qEventsArgs)
+	eventsOut, err := channel.QueryEventsCLI(qEventsArgs, perunID, params.ExecPath)
+	if err != nil {
+		params.T.Errorf("Error for querying channel events: %v", err)
+		return err
+	}
+
+	_ = channel.StringIntoEvents(eventsOut)
+	//channel.EmitLastEvents(eventsOut)
 
 	// Ensure that we have deposited the exact amount to the Perun channel which we planned to do in the txArgs field.
 	require.Equal(params.T, params.TxArgs.Amount, uint64(depositResult.ChannelAlloc), "The number of tokens available in the funded channel should be equal to the amount the user has initially transferred to the Perun Ledger address.")

@@ -3,17 +3,34 @@
 package channel
 
 import (
+	_ "context"
 	"crypto/sha512"
 	"encoding/binary"
-
 	"errors"
 	"fmt"
 	"github.com/aviate-labs/agent-go/candid"
 	"math/rand"
+	//pchannel "perun.network/go-perun/channel"
 	utils "perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
 	"unsafe"
 )
+
+type Funder struct {
+	Account *wallet.Account
+}
+
+// func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
+// 	// fund the channel
+// 	sub, err := f
+// }
+
+func NewFunder(account *wallet.Account) *Funder {
+	// generate a random account
+	return &Funder{
+		Account: account,
+	}
+}
 
 type Params struct {
 	Nonce             []byte
