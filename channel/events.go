@@ -96,17 +96,17 @@ func extractEventData(input string) ([]Event, error) {
 	return events, nil
 }
 
-func StringIntoEvents(input string) []Event {
+func StringIntoEvents(input string) ([]Event, error) {
 	events, err := extractEventData(input)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return []Event{}
+		return []Event{}, err
 	}
 
 	for _, event := range events {
 		fmt.Printf("What: %s, Who: %s, Total: %d\n", event.EventType, event.Who, event.Total)
 	}
-	return events
+	return events, nil
 }
 
 func queryEventsCLI(queryEventsArgs string, canID string, execPath string) (string, error) {
@@ -131,19 +131,52 @@ func QueryEventsCLI(queryEventsArgs string, canID string, execPath string) (stri
 	return queryEventsCLI(queryEventsArgs, canID, execPath)
 }
 
-func listenEvents(queryEventsArgs, canID, execPath string, eventsChan chan<- Event) {
+// func ListenEvents(queryEventsArgs, canID, execPath string, queryFrequency time.Duration, eventsChan chan<- Event) {
+// 	go func() {
+// 		for {
+// 			newEventsString, err := queryEventsCLI(queryEventsArgs, canID, execPath)
+// 			if err != nil {
+// 				fmt.Printf("Error querying events: %v\n", err)
+// 				time.Sleep(queryFrequency)
+// 				continue
+// 			}
+
+// 			newEvents, err := StringIntoEvents(newEventsString)
+// 			if err != nil {
+// 				fmt.Printf("Error converting string to events: %v\n", err)
+// 				time.Sleep(queryFrequency)
+// 				continue
+// 			}
+
+// 			for _, event := range newEvents {
+// 				eventsChan <- event
+// 			}
+// 			time.Sleep(queryFrequency) // Use the input parameter for the interval between querying for events
+// 		}
+// 	}()
+// }
+
+func ListenEvents(queryEventsFunc func(string, string, string) (string, error), stringIntoEventsFunc func(string) ([]Event, error), queryEventsArgs, canID, execPath string, queryFrequency time.Duration, eventsChan chan<- Event) {
 	go func() {
 		for {
-			newEventsString, err := queryEventsCLI(queryEventsArgs, canID, execPath)
-			newEvents := StringIntoEvents(newEventsString)
+			newEventsString, err := queryEventsFunc(queryEventsArgs, canID, execPath)
+			// ...
 			if err != nil {
-				fmt.Printf("Error: %v\n", err)
+				fmt.Printf("Error querying events: %v\n", err)
+				time.Sleep(queryFrequency)
 				continue
 			}
+			newEvents, err := stringIntoEventsFunc(newEventsString)
+			if err != nil {
+				fmt.Printf("Error converting string to events: %v\n", err)
+				time.Sleep(queryFrequency)
+				continue
+			}
+
 			for _, event := range newEvents {
 				eventsChan <- event
 			}
-			time.Sleep(1 * time.Second) // You can adjust the interval between querying for events
+			time.Sleep(queryFrequency) // Use the input parameter for the interval between querying for events
 		}
 	}()
 }
