@@ -46,11 +46,10 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 		return fmt.Errorf("failed to execute DFX transfer: %w", err)
 	}
 
-	fundedVal, err := d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID)
+	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID)
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
-	fmt.Println("fundedVal: ", fundedVal)
 
 	addr := req.Account.ICPAddress()
 	memo, err := req.Funding.Memo()
@@ -85,7 +84,6 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 
 	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
 	eventsString, err := f.conn.QueryEventsCLI(qEventsvArgs, *f.conn.PerunID, f.conn.ExecPath)
-	fmt.Println("eventsString: ", eventsString)
 	if err != nil {
 		return fmt.Errorf("Error for parsing channel events: %v", err)
 	}
@@ -95,20 +93,16 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 		return fmt.Errorf("Error for parsing channel events: %v", err)
 	}
 
-	fmt.Println("Event list length: ", len(eventList)) // Log the number of events
-
 	evli := make(chan chanconn.Event, 1)
 
 	go func() {
 		for _, event := range eventList {
-			fmt.Println("event registered: ", event)
 			evli <- event
 
 		}
 		fmt.Println("Finished registering events inside go routine")
 	}()
 
-	fmt.Println("Finished registering events")
 	//timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(req.Params.ChallengeDuration)*time.Second)
 	//defer cancel()
 	return nil //f.waitforFundings(context.TODO(), evli, req)
@@ -122,10 +116,8 @@ func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, 
 		case <-ctx.Done():
 			return ctx.Err()
 		case event := <-evLi: //src.Events():
-			fmt.Println("event type in case event: ", event.EventType)
 			if event.EventType == "Funded" {
 				fundingEventCount++
-				fmt.Println("Added 1 to fundingEventCount: ", fundingEventCount)
 				if fundingEventCount == 1 {
 					return nil
 				}

@@ -19,8 +19,7 @@ import (
 
 func TestAdjudicator_ConcludeFinal(t *testing.T) {
 	s := test.NewSetup(t)
-	req, params, state := newAdjReq(s, true)
-	fmt.Println("req: ", req)
+	_, params, state := newAdjReq(s, true)
 	dSetup := chtest.NewDepositSetup(params, state)
 	ctx := s.NewCtx()
 

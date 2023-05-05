@@ -159,14 +159,12 @@ func Conclude(nonce Nonce, parts []pwallet.Address, chDur uint64, chanId Channel
 	}
 
 	formatedRequestWithdrawalArgs := utils.FormatConcludeArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
-	fmt.Println("formatedRequestWithdrawalArgs in CONCLUDE: ", formatedRequestWithdrawalArgs)
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}
 
 	canIDString := canID.Encode()
-	fmt.Println("canIDString in CONCLUDE: ", canIDString)
 
 	output, err := execCanisterCommand(path, canIDString, "conclude", formatedRequestWithdrawalArgs, execPath)
 
@@ -179,19 +177,13 @@ func Conclude(nonce Nonce, parts []pwallet.Address, chDur uint64, chanId Channel
 
 func Withdraw(funding Funding, signature pwallet.Sig, canID principal.Principal, execPath ExecPath) (string, error) {
 
-	//perunaccountID := c.PerunID.AccountIdentifier(principal.DefaultSubAccount)
-
-	//channelIdSlice := []byte(funding.Channel[:])
-
 	formatedRequestWithdrawalArgs := utils.FormatWithdrawalArgs(funding.Part[:], funding.Channel[:], signature[:])
-	fmt.Println("formatedRequestWithdrawalArgs in WITHDRAWWW: ", formatedRequestWithdrawalArgs)
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}
 
 	canIDString := canID.Encode()
-	fmt.Println("canIDString in WITHDRAWWW: ", canIDString)
 
 	output, err := execCanisterCommand(path, canIDString, "withdraw", formatedRequestWithdrawalArgs, execPath)
 
