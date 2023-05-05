@@ -3,188 +3,179 @@
 package channel
 
 import (
-	_ "context"
-	"crypto/sha512"
-	"encoding/binary"
-	"errors"
+	"context"
 	"fmt"
-	"github.com/aviate-labs/agent-go/candid"
-	"math/rand"
-	//pchannel "perun.network/go-perun/channel"
+	"github.com/pkg/errors"
+	"math/big"
+	pchannel "perun.network/go-perun/channel"
+	"perun.network/go-perun/log"
+	pwallet "perun.network/go-perun/wallet"
+	chanconn "perun.network/perun-icp-backend/channel/connector"
 	utils "perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
-	"unsafe"
+	"time"
 )
 
+type DepositReq struct {
+	Balance pchannel.Bal
+	Fee     pchannel.Bal
+	Account wallet.Account
+	Funding chanconn.Funding
+}
+
 type Funder struct {
-	Account *wallet.Account
+	acc  *wallet.Account
+	log  log.Embedding
+	conn *chanconn.Connector
+	//mu   sync.Mutex
 }
 
-// func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
-// 	// fund the channel
-// 	sub, err := f
-// }
-
-func NewFunder(account *wallet.Account) *Funder {
-	// generate a random account
-	return &Funder{
-		Account: account,
-	}
+func (f *Funder) GetAcc() *wallet.Account {
+	return f.acc
 }
 
-type Params struct {
-	Nonce             []byte
-	Parts             []wallet.Address
-	ChallengeDuration uint64
-}
+func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 
-type Funding struct {
-	L2Address wallet.Address //Wallet account
-	ChannelId ChannelID
-}
-
-type ChannelID struct {
-	ID []byte
-}
-
-func NewFunding() *Funding {
-	return &Funding{}
-}
-
-type DepositArgs struct {
-	ChannelId   []byte
-	Participant wallet.Address
-	Memo        uint64
-}
-
-func (p *Params) SerializeParamsCandid() ([]byte, error) {
-	if len(p.Parts) != 2 {
-		return nil, fmt.Errorf("expected exactly two participants, got %d", len(p.Parts))
-	}
-
-	challengeDurationBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(challengeDurationBytes, p.ChallengeDuration)
-
-	paramsMotokoArgs := "record { "
-	paramsNonce := "nonce = " + utils.FormatVec(p.Nonce) + " ; "
-	ParamsParts := "participants = vec { " + utils.FormatVec(p.Parts[0]) + " ; " + utils.FormatVec(p.Parts[1]) + "};"
-	paramsChallDuration := "challenge_duration = " + utils.FormatVec(challengeDurationBytes) + " }"
-
-	paramsMotokoArgs = paramsMotokoArgs + paramsNonce + ParamsParts + paramsChallDuration
-
-	enc, err := candid.EncodeValueString(paramsMotokoArgs)
+	depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode params as Candid: %w", err)
+		return fmt.Errorf("failed to build deposit: %w", err)
 	}
-	_, err = candid.DecodeValueString(enc)
+
+	blockNum, err := d.cnr.ExecuteDFXTransfer(depositArgs, *d.cnr.LedgerID, d.cnr.ExecPath, d.cnr.TransferDfxCLI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode encoded params Candid: %w", err)
-	}
-	return enc, nil
-}
-
-func (p *Params) SerializeParams() ([]byte, error) {
-	paramsBytes := []byte{}
-	for _, part := range p.Parts {
-		partBytes, err := part.MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-		paramsBytes = append(paramsBytes, partBytes...)
+		return fmt.Errorf("failed to execute DFX transfer: %w", err)
 	}
 
-	paramsBytes = append(paramsBytes, p.Nonce...)
-	challengeDurationBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(challengeDurationBytes, p.ChallengeDuration)
-	paramsBytes = append(paramsBytes, challengeDurationBytes...)
-	return paramsBytes, nil
-}
-
-func (p *Params) ParamsIDCandid() ([]byte, error) {
-	hasher := sha512.New()
-	msg, err := p.SerializeParamsCandid()
+	fundedVal, err := d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize params: %w", err)
+		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
-	hasher.Write(msg)
-	return hasher.Sum(nil), nil
-}
+	fmt.Println("fundedVal: ", fundedVal)
 
-func (p *Params) ParamsIDStandard() ([]byte, error) {
-	hasher := sha512.New()
-	msg, err := p.SerializeParams()
+	addr := req.Account.ICPAddress()
+	memo, err := req.Funding.Memo()
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize params: %w", err)
-	}
-	lenMsg := len(msg)
-	fmt.Println("lenMsg: ", lenMsg)
-	hasher.Write(msg)
-	fullHash := hasher.Sum(nil)
-
-	if lenMsg <= 64 {
-		return fullHash[:lenMsg], nil
-	}
-	result := make([]byte, lenMsg)
-	copy(result[:64], fullHash)
-	// The remaining bytes of 'result' are already initialized to zero
-
-	return result, nil
-}
-
-func (p *Params) DeserializeParamsStandard(data []byte) error {
-	addressLength := int(unsafe.Sizeof(wallet.Address{}))
-	challengeDurationBytes := int(unsafe.Sizeof(p.ChallengeDuration))
-	nonceLength := len(p.Nonce)
-
-	if len(data) < challengeDurationBytes+nonceLength {
-		return errors.New("insufficient data length")
+		return fmt.Errorf("failed to get memo from funding: %w", err)
 	}
 
-	// Deserialize Parts
-	p.Parts = []wallet.Address{}
-	for len(data) > challengeDurationBytes+nonceLength {
-		part := new(wallet.Address)
-		err := part.UnmarshalBinary(data[:addressLength])
-		if err != nil {
-			return err
-		}
+	perunID := d.cnr.PerunID
+	ExecPath := d.cnr.ExecPath
 
-		p.Parts = append(p.Parts, *part)
-		data = data[addressLength:]
+	depositResult, err := d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *perunID, ExecPath)
+	if err != nil {
+		return fmt.Errorf("failed to deposit to perun channel: %w", err)
 	}
-
-	// Deserialize Nonce
-	p.Nonce = data[:nonceLength]
-	data = data[nonceLength:]
-
-	// Deserialize ChallengeDuration
-	p.ChallengeDuration = binary.LittleEndian.Uint64(data)
+	fmt.Println("depositResult: ", depositResult)
 
 	return nil
 }
 
-func NonceHash(rng *rand.Rand) []byte {
-	randomUint64 := rng.Uint64()
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, randomUint64)
-	hashArray := sha512.Sum512(bytes)
-	hashSlice := hashArray[:]
-	return hashSlice
-}
+func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
+	tstamp := time.Now().UnixNano()
 
-func (f *Funding) Memo() (uint64, error) {
-	serializedFunding, err := f.SerializeFundingCandid()
+	wReq, err := NewDepositReqFromPerun(&req, f.acc)
+
 	if err != nil {
-		return 0, fmt.Errorf("error in serializing funding: %w", err)
+		return err
+	}
+	if err := NewDepositor(f.conn).Deposit(ctx, wReq); err != nil {
+		return err
+	}
+	chanID := wReq.Funding.Channel
+
+	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
+	eventsString, err := f.conn.QueryEventsCLI(qEventsvArgs, *f.conn.PerunID, f.conn.ExecPath)
+	fmt.Println("eventsString: ", eventsString)
+	if err != nil {
+		return fmt.Errorf("Error for parsing channel events: %v", err)
 	}
 
-	hasher := sha512.New()
-	hasher.Write(serializedFunding)
-	fullHash := hasher.Sum(nil)
+	eventList, err := chanconn.StringIntoEvents(eventsString)
+	if err != nil {
+		return fmt.Errorf("Error for parsing channel events: %v", err)
+	}
 
-	var arr [8]byte
-	copy(arr[:], fullHash[:8])
-	memo := binary.LittleEndian.Uint64(arr[:])
+	fmt.Println("Event list length: ", len(eventList)) // Log the number of events
 
-	return memo, nil
+	evli := make(chan chanconn.Event, 1)
+
+	go func() {
+		for _, event := range eventList {
+			fmt.Println("event registered: ", event)
+			evli <- event
+
+		}
+		fmt.Println("Finished registering events inside go routine")
+	}()
+
+	fmt.Println("Finished registering events")
+	//timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(req.Params.ChallengeDuration)*time.Second)
+	//defer cancel()
+	return nil //f.waitforFundings(context.TODO(), evli, req)
+}
+
+func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, req pchannel.FundingReq) error {
+	fmt.Println("Starting waitforFundings")
+	fundingEventCount := 0
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case event := <-evLi: //src.Events():
+			fmt.Println("event type in case event: ", event.EventType)
+			if event.EventType == "Funded" {
+				fundingEventCount++
+				fmt.Println("Added 1 to fundingEventCount: ", fundingEventCount)
+				if fundingEventCount == 1 {
+					return nil
+				}
+			}
+		}
+	}
+}
+
+func NewFunder(acc *wallet.Account, c *chanconn.Connector) *Funder {
+	return &Funder{
+		acc:  acc,
+		conn: c,
+		log:  log.MakeEmbedding(log.Default()),
+	}
+}
+
+func NewDepositReqFromPerun(req *pchannel.FundingReq, acc pwallet.Account) (*DepositReq, error) {
+	if !req.Agreement.Equal(req.State.Balances) && (len(req.Agreement) == 1) {
+		return nil, chanconn.ErrFundingReqIncompatible
+	}
+	bal := req.Agreement[0][req.Idx]
+	fee := big.NewInt(0)
+	fReq, err := MakeFundingReq(req)
+	if err != nil {
+		return nil, errors.WithMessage(chanconn.ErrFundingReqIncompatible, err.Error())
+	}
+	convAcc := *acc.(*wallet.Account)
+	return NewDepositReq(bal, fee, convAcc, fReq), err
+}
+
+func MakeFundingReq(req *pchannel.FundingReq) (chanconn.Funding, error) {
+	ident, err := chanconn.MakeOffIdent(req.Params.Parts[req.Idx])
+
+	return chanconn.Funding{
+		Channel: req.State.ID,
+		Part:    ident,
+	}, err
+}
+
+func NewDepositReq(bal, fee pchannel.Bal, acc wallet.Account, funding chanconn.Funding) *DepositReq {
+	return &DepositReq{bal, fee, acc, funding}
+}
+
+// NewDepositor returns a new Depositor.
+func NewDepositor(cnr *chanconn.Connector) *Depositor {
+	return &Depositor{log.MakeEmbedding(log.Default()), cnr}
+}
+
+type Depositor struct {
+	log.Embedding
+
+	cnr *chanconn.Connector
 }

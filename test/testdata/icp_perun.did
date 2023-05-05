@@ -33,6 +33,7 @@ type Nonce = Hash;
 type ChannelId = Hash;
 type Amount = nat;
 type Memo = nat64;
+type Signature = Hash;
 
 type Funding = record { channel : ChannelId; participant : L2Account };
 type FundMem = record {
@@ -52,14 +53,6 @@ type ChannelTime = record {
 	time : nat64;
 };
 
-//type RegisteredState = record { state : State; timeout : nat64 };
-
-//type State = record {
-//    version : nat64;
-//    finalized : bool;
-//    allocation : vec nat;
-//    channel : vec nat8;};
-
 type Params = record {
 	nonce : Nonce;
 	participants : vec L2Account;
@@ -78,9 +71,22 @@ type FullySignedState = record {
 	sigs : vec blob;
 };
 
+type ConcludeRequest = record {
+	nonce : Nonce;
+	participants : vec L2Account;
+	challenge_duration : Duration;
+	channel : ChannelId;
+	version : nat64;
+	allocation : vec Amount;
+	finalized : bool;
+	sigs : vec Signature;
+};
+
 type WithdrawalRequest = record {
-	funding : Funding;
+	channel : ChannelId;
+	participant : L2Account;
 	receiver : principal;
+	signature : Signature;
 };
 
 type RegisteredState = record {
@@ -93,15 +99,13 @@ service : {
 	"deposit" : (Funding) -> (opt Error);
 	"deposit_memo" : (FundMem) -> (opt Error);
 	"query_holdings" : (Funding) -> (opt Amount) query;
-	"conclude" : (Params, FullySignedState) -> (opt Error);
+	"conclude" : (ConcludeRequest) -> (opt Error);
 	"dispute" : (Params, FullySignedState) -> (opt Error);
 	"query_state" : (ChannelId) -> (opt RegisteredState);
-	//"query_events": (ChannelId) -> (opt Events);
-	"withdraw" : (WithdrawalRequest, blob) -> (opt Amount, opt Error);
+	"withdraw" : (WithdrawalRequest) -> (opt Amount, opt Error); //, blob
 	"query_fid" : (Funding) -> (opt Memo) query;
 	"query_memo" : (Memo) -> (opt Memo) query;
 	"transaction_notification" : (nat64) -> ();
-	//"query_funding_memo": (Funding, Memo) -> (opt Funding, opt Memo) query;
 	"query_funding_memo" : (FundMem) -> (opt FundMem) query;
 	"query_funding_only" : (Funding) -> (opt Funding) query;
 	"__get_candid_interface_tmp_hack" : () -> (text) query;

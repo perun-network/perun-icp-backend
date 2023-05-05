@@ -25,12 +25,12 @@ func ByteToVecString(memo []byte) string {
 	return "vec{" + str + "}"
 }
 
-func DecodePrincipal(principalString string) (principal.Principal, error) {
+func DecodePrincipal(principalString string) (*principal.Principal, error) {
 	decPrincipal, err := principal.Decode(principalString)
 	if err != nil {
-		return principal.Principal{}, fmt.Errorf("error decoding Principal String: %w", err)
+		return &principal.Principal{}, fmt.Errorf("error decoding Principal String: %w", err)
 	}
-	return decPrincipal, nil
+	return &decPrincipal, nil
 }
 
 func FormatWithUnderscores(n uint64) string {
@@ -47,6 +47,55 @@ func FormatWithUnderscores(n uint64) string {
 	}
 
 	return strings.Join(parts, "_")
+}
+
+func FormatFundingArgs(addr, chanId []byte) string {
+	return fmt.Sprintf("( record { channel = blob\"%s\"; participant = %s } )", FormatHexByte(chanId), FormatVec(addr))
+}
+func FormatFidArgs(addr, chanId []byte) string {
+	return fmt.Sprintf("(record {channel = %s; participant = %s})", FormatVec(chanId), FormatVec(addr))
+}
+
+func FormatParamsArgs(nonce []byte, parts [][]byte, duration uint64) string {
+	return fmt.Sprintf("(record {nonce = %s; participants = vec{%s ; %s} ; duration = %d : nat64})", FormatVec(nonce), FormatVec(parts[0]), FormatVec(parts[1]), duration)
+}
+
+func FormatStateArgs(chanId []byte, version uint64, alloc []uint64, finalized bool) string {
+	return fmt.Sprintf("(record {channel = %s; version = %d : nat64; allocation = vec{%d ; %d} ; isFinal = %t : bool})", FormatVec(chanId), version, alloc[0], alloc[1], finalized)
+}
+
+// gwjf3-rxk3d-lfwux-5evls-qw4gc-fyh4e-ohkeg-zg32g-vqfcw-yaaqs-tqe
+func FormatWithdrawalArgs(addr, chanId, sig []byte) string { //, prince string
+	return fmt.Sprintf("(record { channel = blob \"%s\"; participant = %s ; receiver = principal \"gwjf3-rxk3d-lfwux-5evls-qw4gc-fyh4e-ohkeg-zg32g-vqfcw-yaaqs-tqe\" ; signature = %s})", FormatHexByte(chanId), FormatVec(addr), FormatVec(sig))
+}
+
+func FormatConcludeArgs(nonce []byte, addrs [][]byte, chDur uint64, chanId []byte, version uint64, alloc []int, finalized bool, sig [][]byte) string { //, prince string
+	return fmt.Sprintf(
+		"(record { nonce = blob \"%s\"; participants = vec{ %s; %s} ; challenge_duration = %d: nat64 ; channel = blob \"%s\" ; version = %d : nat64; allocation = vec{ %d ; %d } ; finalized = %t : bool ; sigs = vec{ %s ; %s}})",
+		FormatHexByte(nonce), FormatVec(addrs[0]), FormatVec(addrs[1]), chDur, FormatHexByte(chanId), version, alloc[0], alloc[1], finalized, FormatVec(sig[0]), FormatVec(sig[1]))
+}
+
+func FormatFundingMemoArgs(addr, chanId []byte, memo uint64) string {
+	var builder strings.Builder
+
+	builder.WriteString(fmt.Sprintf(
+		"(record {channel = blob\"%s\"; participant = %s; memo = %d : nat64 })",
+		FormatHexByte(chanId),
+		FormatVec(addr),
+		memo,
+	))
+
+	return builder.String()
+}
+
+func FormatHexByte(input []byte) string {
+	var result strings.Builder
+
+	for _, b := range input {
+		result.WriteString(fmt.Sprintf("%02x", b))
+	}
+
+	return result.String()
 }
 
 func FormatHex(hexStr string) string {
@@ -93,7 +142,7 @@ func ExtractBlock(s string) (uint64, error) {
 	re := regexp.MustCompile(`\d+ = (\d+)`)
 	matches := re.FindStringSubmatch(s)
 	if len(matches) < 2 {
-		return 0, fmt.Errorf("no value found")
+		return 0, fmt.Errorf("no value found extracting the block")
 	}
 
 	value, err := strconv.ParseUint(matches[1], 10, 64)
@@ -104,11 +153,25 @@ func ExtractBlock(s string) (uint64, error) {
 	return value, nil
 }
 
+func FormatTransferArgs(memo, amount, fee uint64, sendTo string) string {
+	var builder strings.Builder
+
+	builder.WriteString(fmt.Sprintf(
+		"(record {memo = %d : nat64; amount = record { e8s=%s : nat64}; fee = record { e8s=%s : nat64}; from_subaccount = null; to = blob\"%s\"; created_at_time = null; })",
+		memo,
+		FormatWithUnderscores(amount),
+		FormatWithUnderscores(fee),
+		FormatHex(sendTo),
+	))
+
+	return builder.String()
+}
+
 func ExtractTxAmount(s string) (int, error) {
 	re := regexp.MustCompile(`\d+ = (\d+)`)
 	matches := re.FindStringSubmatch(s)
 	if len(matches) < 2 {
-		return 0, fmt.Errorf("no value found")
+		return 0, fmt.Errorf("no value found extracting the amount")
 	}
 
 	value, err := strconv.Atoi(matches[1])
@@ -119,7 +182,7 @@ func ExtractTxAmount(s string) (int, error) {
 	return value, nil
 }
 
-func ExtractHoldingsNat(input string) (int, error) {
+func ExtractHoldingsNat(input string) (uint64, error) {
 	re := regexp.MustCompile(`\d+(_\d+)*`)
 	numberWithUnderscores := re.FindString(input)
 	numberWithoutUnderscores := strings.Replace(numberWithUnderscores, "_", "", -1)
@@ -129,5 +192,17 @@ func ExtractHoldingsNat(input string) (int, error) {
 		return 0, err
 	}
 
-	return natValue, nil
+	return uint64(natValue), nil
+}
+
+func FormatChanTimeArgs(chanId []byte, tstamp uint64) string {
+	var builder strings.Builder
+
+	builder.WriteString(fmt.Sprintf(
+		"(record {chanid = blob \"%s\";  time = %d : nat64 })",
+		FormatHexByte(chanId),
+		tstamp,
+	))
+
+	return builder.String()
 }

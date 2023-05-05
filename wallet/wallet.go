@@ -7,11 +7,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	ed "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
 	"io"
+	"math/rand"
 	"os"
 	"sync"
-
-	ed "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
 
 	"perun.network/go-perun/wallet"
 )
@@ -161,6 +161,22 @@ func (w *FsWallet) genAcc(id uint64) Account {
 // NewAccount creates a fresh unlocked account. This account is not persisted
 // until IncrementUsage() is called on it.
 func (w *FsWallet) NewAccount() Account {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	acc := w.genAcc(w.latestAcc)
+	w.openAccs[string(*acc.Address().(*Address))] = &openAcc{
+		nonce:    w.latestAcc,
+		useCount: 0,
+		acc:      acc,
+	}
+
+	w.latestAcc++
+	return acc
+}
+
+// NewRandomAccount creates a new random account using the wallet package.
+func (w *FsWallet) NewRandomAccount(_ *rand.Rand) wallet.Account {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 

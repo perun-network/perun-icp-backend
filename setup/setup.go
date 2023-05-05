@@ -4,33 +4,27 @@ package setup
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"perun.network/perun-icp-backend/channel"
+
 	"time"
 )
 
 // "./.config/.dfx/identities/minter/identity.pem", // minter test identity generated with keysmith:
 // https://github.com/dfinity/keysmith and imported with dfx 0.13.1
 
-var DfxTestParams = channel.DfxConfig{
-	Host:        "http://127.0.0.1",
-	Port:        8000,
-	ExecPath:    "./test/testdata/",
-	AccountPath: filepath.Join(setHomeDir(), ".config", "dfx", "identity", "minter", "identity.pem"),
+type DfxConfig struct {
+	Host        string
+	Port        int
+	ExecPath    string
+	AccountPath string // use local path to a minter .pem file
 }
 
-func setHomeDir() string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
-	}
-	return homeDir
+type Dfx struct {
+	ExecPath string
 }
 
-func StartDeployDfx() (*exec.Cmd, error) {
-	err := checkDFXInstallation()
+func (d *Dfx) StartDeployDfx(config DfxConfig) (*exec.Cmd, error) {
+	err := d.checkDFXInstallation()
 	if err != nil {
 		return nil, fmt.Errorf("DFX CLI Environment not installed. Check installation typing 'dfx --version' in your terminal %v", err)
 	}
@@ -40,12 +34,12 @@ func StartDeployDfx() (*exec.Cmd, error) {
 		return nil, err
 	}
 
-	dfx, err := startDFX(path, DfxTestParams.ExecPath)
+	dfx, err := d.startDFX(path, config.ExecPath)
 	if err != nil {
 		return nil, err
 	}
 
-	err = DeployCanisters(path, DfxTestParams.ExecPath)
+	err = DeployCanisters(path, config.ExecPath)
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +47,12 @@ func StartDeployDfx() (*exec.Cmd, error) {
 	return dfx, nil
 }
 
-func checkDFXInstallation() error {
+func (d *Dfx) checkDFXInstallation() error {
 	_, err := exec.LookPath("dfx")
 	return err
 }
 
-func startDFX(path, execPath string) (*exec.Cmd, error) {
+func (d *Dfx) startDFX(path, execPath string) (*exec.Cmd, error) {
 	dfx := exec.Command(path, "start", "--background", "--clean")
 	dfx.Dir = execPath
 
@@ -72,14 +66,14 @@ func startDFX(path, execPath string) (*exec.Cmd, error) {
 	return dfx, nil
 }
 
-func StopDFX(dfx *exec.Cmd) error {
+func (d *Dfx) StopDFX(dfx *exec.Cmd) error {
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return err
 	}
 
 	cmd := exec.Command(path, "stop")
-	cmd.Dir = DfxTestParams.ExecPath
+	cmd.Dir = d.ExecPath
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -148,4 +142,30 @@ func deployPerun(path, execPath string) error {
 
 	fmt.Println(string(outputPerun))
 	return nil
+}
+
+type DfxSetup struct {
+	DfxInstance *Dfx
+	DfxConfig   DfxConfig
+	DfxCmd      *exec.Cmd
+}
+
+func NewDfxSetup(config DfxConfig) *DfxSetup {
+	return &DfxSetup{
+		DfxInstance: &Dfx{},
+		DfxConfig:   config,
+	}
+}
+
+func (d *DfxSetup) StartDeployDfx() error {
+	dfxCmd, err := d.DfxInstance.StartDeployDfx(d.DfxConfig)
+	if err != nil {
+		return err
+	}
+	d.DfxCmd = dfxCmd
+	return nil
+}
+
+func (d *DfxSetup) StopDFX() error {
+	return d.DfxInstance.StopDFX(d.DfxCmd)
 }

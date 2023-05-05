@@ -12,19 +12,19 @@ import (
 	"github.com/aviate-labs/agent-go/identity"
 	"github.com/aviate-labs/agent-go/ledger"
 	"github.com/aviate-labs/agent-go/principal"
+	"perun.network/perun-icp-backend/setup"
 	"perun.network/perun-icp-backend/wallet"
 )
 
-type DfxConfig struct {
-	Host        string
-	Port        int
-	ExecPath    string
-	AccountPath string // use local path to a minter .pem file
-}
+// type UserClient struct {
+// 	Agent     *agent.Agent
+// 	L2Account wallet.Account
+// 	Ledger    *ledger.Agent
+// }
 
-type UserClient struct {
-	Agent     *agent.Agent
+type PerunUser struct {
 	L2Account wallet.Account
+	Agent     *agent.Agent
 	Ledger    *ledger.Agent
 }
 
@@ -36,7 +36,7 @@ type UserClient struct {
 // 	return ledgerAgent, nil
 // }
 
-func (u UserClient) NewL2Account() (wallet.Account, error) {
+func (u *PerunUser) NewL2Account() (wallet.Account, error) {
 	wlt, err := wallet.NewRAMWallet(rand.Reader)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (u UserClient) NewL2Account() (wallet.Account, error) {
 	return acc, nil
 }
 
-func MakeLedger(config DfxConfig, canisterId principal.Principal) (*ledger.Agent, error) {
+func MakeLedger(config setup.DfxConfig, canisterId principal.Principal) (*ledger.Agent, error) {
 	data, err := os.ReadFile(config.AccountPath)
 	if err != nil {
 		return nil, err
@@ -68,30 +68,30 @@ func MakeLedger(config DfxConfig, canisterId principal.Principal) (*ledger.Agent
 	return &a, nil
 }
 
-func NewUserClient(config DfxConfig, prLedger principal.Principal) (*UserClient, error) {
+func NewPerunUser(config setup.DfxConfig, prLedger principal.Principal) (*PerunUser, error) {
 	agent, err := NewAgent(config)
 	if err != nil {
 		return nil, err
 	}
-	userClient := &UserClient{
+	perunUser := &PerunUser{
 		Agent: agent,
 	}
 	//agentLedger, err := MakeLedger(config, prLedger)
 
-	userClient.Ledger, err = MakeLedger(config, prLedger)
+	perunUser.Ledger, err = MakeLedger(config, prLedger)
 	if err != nil {
 		return nil, err
 	}
 
-	userClient.L2Account, err = userClient.NewL2Account()
+	perunUser.L2Account, err = perunUser.NewL2Account()
 	if err != nil {
 		return nil, err
 	}
 
-	return userClient, nil
+	return perunUser, nil
 }
 
-func NewAgent(config DfxConfig) (*agent.Agent, error) {
+func NewAgent(config setup.DfxConfig) (*agent.Agent, error) {
 	data, err := os.ReadFile(config.AccountPath)
 	if err != nil {
 		return nil, err
@@ -111,6 +111,7 @@ func NewAgent(config DfxConfig) (*agent.Agent, error) {
 	// 	ClientConfig: &agent.ClientConfig{
 	// 		Host: ic0,
 	// 	}})
+
 	agent := agent.New(agent.Config{
 		Identity: agentID,
 		ClientConfig: &agent.ClientConfig{

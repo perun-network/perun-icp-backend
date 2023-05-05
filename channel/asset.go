@@ -7,7 +7,6 @@ import (
 	pchannel "perun.network/go-perun/channel"
 )
 
-// asset is the Asset of the connected substrate chain.
 // Implements the Perun Asset interface.
 // Does not contain any fields since there is only one asset per chain.
 type asset struct{}
