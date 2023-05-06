@@ -80,21 +80,6 @@ func (c *Connector) notifyDfx(blockNum BlockNum, notifyTo principal.Principal, e
 	if err != nil {
 		return "", fmt.Errorf("failed to encode notification arguments: %w", err)
 	}
-
-	// fmt.Println("formatedNotifyArgs: ", formatedNotifyArgs)
-
-	// canIDString := notifyTo.Encode()
-	// path, err := exec.LookPath("dfx")
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
-	// }
-	// fmt.Println("execPath: ", execPath)
-	// fmt.Println("notify_args: ", formatedNotifyArgs)
-	// respNote, err := execCanisterCommand(path, canIDString, "transaction_notification", formatedNotifyArgs, execPath)
-	// fmt.Println("notify_output: ", respNote)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to deposit amount identified by a memo: %w", err)
-	// }
 	respNote, err := c.Agent.CallString(notifyTo, "transaction_notification", encodedNotifyArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to call notify method: %w", err)
