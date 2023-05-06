@@ -2,8 +2,6 @@
 package test
 
 import (
-	"fmt"
-
 	"perun.network/perun-icp-backend/channel"
 	chtest "perun.network/perun-icp-backend/channel/test"
 
@@ -26,11 +24,10 @@ func NewSetup(t *testing.T) *Setup {
 	ret := &Setup{Setup: s}
 
 	for i := 0; i < len(s.Accs); i++ {
-		fmt.Println("NewConn: ", c[i])
 		dep := channel.NewDepositor(c[i])
 		ret.Deps = append(ret.Deps, dep)
 		ret.Funders = append(ret.Funders, channel.NewFunder(&s.Accs[i], c[i]))
-		//ret.Adjs = append(ret.Adjs, pallet.NewAdjudicator(s.Accs[i].Acc, p, s.API, PastBlocks))
+		ret.Adjs = append(ret.Adjs, channel.NewAdjudicator(&s.Accs[i], c[i]))
 	}
 
 	return ret

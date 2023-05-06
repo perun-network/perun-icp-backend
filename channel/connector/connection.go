@@ -47,15 +47,15 @@ func (c *Connector) TransferDfxCLI(txArgs TxArgs, canID principal.Principal, exe
 	if err != nil {
 		return "", fmt.Errorf("dfx transfer command failed: %v\nOutput: %s", err, output)
 	}
+	fmt.Println("output from transfer: ", string(output))
 
 	return string(output), nil
 }
 
 type TransferFunction func(TxArgs, principal.Principal, ExecPath) (string, error)
 
-func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun principal.Principal) (uint64, error) {
-
-	receiptAmount, err := c.notifyDfx(blockNum, recipientPerun)
+func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun principal.Principal, execPath ExecPath) (uint64, error) {
+	receiptAmount, err := c.notifyDfx(blockNum, recipientPerun, execPath)
 	if err != nil {
 		return 0, fmt.Errorf("error notifying transfer to Perun: %v", err)
 	}
@@ -64,7 +64,8 @@ func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun prin
 	if err != nil {
 		return 0, fmt.Errorf("error extracting transaction amount: %v", err)
 	}
-	_, err = c.notifyDfx(blockNum, recipientPerun)
+
+	_, err = c.notifyDfx(blockNum, recipientPerun, execPath)
 	if err != nil {
 		return 0, fmt.Errorf("error for the (optional) second notification on the transfer to fund the Perun channel: %v", err)
 	}
@@ -72,22 +73,34 @@ func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun prin
 	return uint64(fundedValue), nil
 }
 
-func (c *Connector) notifyDfx(blockNum BlockNum, notifyTo principal.Principal) (string, error) {
+func (c *Connector) notifyDfx(blockNum BlockNum, notifyTo principal.Principal, execPath ExecPath) (string, error) {
 	// Notification of token transfer to the Perun canister
-
 	formatedNotifyArgs := utils.FormatNotifyArgs(uint64(blockNum))
 	encodedNotifyArgs, err := candid.EncodeValueString(formatedNotifyArgs)
-
 	if err != nil {
 		return "", fmt.Errorf("failed to encode notification arguments: %w", err)
 	}
 
+	// fmt.Println("formatedNotifyArgs: ", formatedNotifyArgs)
+
+	// canIDString := notifyTo.Encode()
+	// path, err := exec.LookPath("dfx")
+	// if err != nil {
+	// 	return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
+	// }
+	// fmt.Println("execPath: ", execPath)
+	// fmt.Println("notify_args: ", formatedNotifyArgs)
+	// respNote, err := execCanisterCommand(path, canIDString, "transaction_notification", formatedNotifyArgs, execPath)
+	// fmt.Println("notify_output: ", respNote)
+	// if err != nil {
+	// 	return "", fmt.Errorf("failed to deposit amount identified by a memo: %w", err)
+	// }
 	respNote, err := c.Agent.CallString(notifyTo, "transaction_notification", encodedNotifyArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to call notify method: %w", err)
 	}
 
-	return string(respNote), nil
+	return respNote, nil
 
 }
 
@@ -216,7 +229,8 @@ func depositFundMemPerunCLI(depositArgs DepositArgs, canID principal.Principal, 
 		return fmt.Errorf("failed to deposit amount identified by a memo: %w", err)
 	}
 
-	fmt.Println("deposit_memo output: ", string(output))
+	fmt.Println("Deposited amount: ", string(output))
+
 	return nil
 }
 
@@ -313,7 +327,6 @@ func (c *Connector) QueryFunding(fundingArgs DepositArgs, queryAt principal.Prin
 
 	formatedFundingArgs := utils.FormatFundingArgs(addr, channelIdSlice)
 	encodedQueryFundingArgs, err := candid.EncodeValueString(formatedFundingArgs)
-	fmt.Println("Encoded QueryFunding Args: ", encodedQueryFundingArgs)
 
 	if err != nil {
 		return fmt.Errorf("failed to encode query funding arguments: %w", err)

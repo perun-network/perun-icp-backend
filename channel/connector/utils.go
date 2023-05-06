@@ -90,6 +90,12 @@ func execCanisterCommand(path, canID, method, args string, execPath ExecPath) (s
 	return string(output), nil
 }
 
+// ExecCanisterCommand is a wrapper around the unexported execCanisterCommand function
+// to make it accessible outside the utils package.
+func ExecCanisterCommand(path, canID, method, args string, execPath ExecPath) (string, error) {
+	return execCanisterCommand(path, canID, method, args, execPath)
+}
+
 func NonceHash(rng *rand.Rand) []byte {
 	randomUint64 := rng.Uint64()
 	bytes := make([]byte, 8)

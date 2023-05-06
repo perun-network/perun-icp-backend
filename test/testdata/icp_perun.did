@@ -95,7 +95,6 @@ type RegisteredState = record {
 };
 
 service : {
-	//"deposit": (Funding) -> (opt Error);
 	"deposit" : (Funding) -> (opt Error);
 	"deposit_memo" : (FundMem) -> (opt Error);
 	"query_holdings" : (Funding) -> (opt Amount) query;

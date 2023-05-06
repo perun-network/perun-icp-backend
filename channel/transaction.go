@@ -63,6 +63,5 @@ func QueryStateCLI(queryStateArgs string, canID string, execPath string) error {
 		return fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
 	}
 
-	fmt.Printf("Queried state after attempted deposit: %s", output)
 	return nil
 }

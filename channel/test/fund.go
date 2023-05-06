@@ -3,7 +3,6 @@ package test
 
 import (
 	"context"
-
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/perun-icp-backend/channel"
 )

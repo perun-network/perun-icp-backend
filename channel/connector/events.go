@@ -95,7 +95,7 @@ func ListenEvents(ctx context.Context, queryEventsFunc func(string, string, stri
 				}
 
 				for _, event := range newEvents {
-					fmt.Println("New Event Inside ListenEvents: ", event)
+					fmt.Println("New Event in ListenEvents: ", event)
 					eventsChan <- event
 				}
 				time.Sleep(queryFrequency) //  interval between querying for events

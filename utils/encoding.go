@@ -75,6 +75,12 @@ func FormatConcludeArgs(nonce []byte, addrs [][]byte, chDur uint64, chanId []byt
 		FormatHexByte(nonce), FormatVec(addrs[0]), FormatVec(addrs[1]), chDur, FormatHexByte(chanId), version, alloc[0], alloc[1], finalized, FormatVec(sig[0]), FormatVec(sig[1]))
 }
 
+// func FormatConcludeArgs(nonce []byte, addrs [][]byte, chDur uint64, chanId []byte, version uint64, alloc []int, finalized bool, sig [][]byte) string { //, prince string
+// 	return fmt.Sprintf(
+// 		"( { nonce = blob \"%s\"; participants = vec{ blob \"%s\"; blob \"%s\"} ; challenge_duration = %d: nat64 ; channel = blob \"%s\" ; version = %d : nat64; allocation = vec{ %d ; %d } ; finalized = %t : bool ; sigs = vec{ blob \"%s\"; blob \"%s\"})",
+// 		FormatHexByte(nonce), FormatHexByte(addrs[0]), FormatHexByte(addrs[1]), chDur, FormatHexByte(chanId), version, alloc[0], alloc[1], finalized, FormatHexByte(sig[0]), FormatHexByte(sig[1]))
+// }
+
 func FormatFundingMemoArgs(addr, chanId []byte, memo uint64) string {
 	var builder strings.Builder
 
@@ -133,6 +139,7 @@ func FormatVec(data []uint8) string {
 func FormatNotifyArgs(blocknum uint64) string {
 	fullArg := "("
 	blocknumArg := fmt.Sprintf("%d : nat64", blocknum) + " )"
+
 	fullArg += blocknumArg
 
 	return fullArg

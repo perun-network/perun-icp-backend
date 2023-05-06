@@ -27,7 +27,6 @@ type Funder struct {
 	acc  *wallet.Account
 	log  log.Embedding
 	conn *chanconn.Connector
-	//mu   sync.Mutex
 }
 
 func (f *Funder) GetAcc() *wallet.Account {
@@ -35,7 +34,6 @@ func (f *Funder) GetAcc() *wallet.Account {
 }
 
 func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
-
 	depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
 	if err != nil {
 		return fmt.Errorf("failed to build deposit: %w", err)
@@ -46,7 +44,7 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 		return fmt.Errorf("failed to execute DFX transfer: %w", err)
 	}
 
-	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID)
+	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
@@ -59,11 +57,11 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 
 	perunID := d.cnr.PerunID
 	ExecPath := d.cnr.ExecPath
-
 	depositResult, err := d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *perunID, ExecPath)
 	if err != nil {
 		return fmt.Errorf("failed to deposit to perun channel: %w", err)
 	}
+
 	fmt.Println("depositResult: ", depositResult)
 
 	return nil
@@ -83,6 +81,7 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	chanID := wReq.Funding.Channel
 
 	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
+
 	eventsString, err := f.conn.QueryEventsCLI(qEventsvArgs, *f.conn.PerunID, f.conn.ExecPath)
 	if err != nil {
 		return fmt.Errorf("Error for parsing channel events: %v", err)
@@ -98,9 +97,8 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	go func() {
 		for _, event := range eventList {
 			evli <- event
-
+			fmt.Println("Event registered: ", event)
 		}
-		fmt.Println("Finished registering events inside go routine")
 	}()
 
 	//timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(req.Params.ChallengeDuration)*time.Second)

@@ -4,7 +4,6 @@ package test
 import (
 	"context"
 	cr "crypto/rand"
-	"fmt"
 	"github.com/aviate-labs/agent-go/candid"
 	"github.com/stretchr/testify/require"
 	"math"
@@ -169,8 +168,6 @@ func NewDepositSetup(params *pchannel.Params, state *pchannel.State, accs ...wal
 	for i := range accs {
 		dReqs[i], _ = channel.NewDepositReqFromPerun(fReqs[i], accs[i])
 	}
-
-	fmt.Println("DepositReq:", dReqs)
 
 	return &DepositSetup{
 		FReqs:     []*pchannel.FundingReq{reqAlice, reqBob},
