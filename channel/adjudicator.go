@@ -6,7 +6,6 @@ package channel
 import (
 	"fmt"
 	"github.com/aviate-labs/agent-go/candid"
-	"github.com/aviate-labs/agent-go/principal"
 
 	"github.com/pkg/errors"
 	"os/exec"
@@ -46,7 +45,7 @@ func NewAdjudicator(acc *wallet.Account, c *chanconn.Connector) *Adjudicator {
 	}
 }
 
-func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig, canID principal.Principal, execPath chanconn.ExecPath) (string, error) {
+func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig) (string, error) {
 
 	addrs := make([][]byte, len(parts))
 	for i, part := range parts {
@@ -67,7 +66,9 @@ func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Addre
 		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}
 
+	canID := a.conn.PerunID
 	canIDString := canID.String()
+	execPath := a.conn.ExecPath
 	output, err := chanconn.ExecCanisterCommand(path, canIDString, "conclude", formatedRequestConcludeArgs, execPath)
 
 	if err != nil {
@@ -77,7 +78,7 @@ func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Addre
 	return output, nil
 }
 
-func (a *Adjudicator) ConcludeAgentGo(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig, canID principal.Principal) (string, error) {
+func (a *Adjudicator) ConcludeAgentGo(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig) (string, error) {
 
 	addrs := make([][]byte, len(parts))
 	for i, part := range parts {
@@ -89,23 +90,19 @@ func (a *Adjudicator) ConcludeAgentGo(nonce chanconn.Nonce, parts []pwallet.Addr
 	}
 	allocInts := make([]int, len(alloc.Balances[0]))
 	for i, balance := range alloc.Balances[0] {
-		allocInts[i] = int(balance.Int64()) // Convert *big.Int to int64 and then to int
+		allocInts[i] = int(balance.Int64())
 	}
 
 	formatedRequestConcludeArgs := utils.FormatConcludeArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
-	//path, err := exec.LookPath("dfx")
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
-	// }
 
 	encodedConcludeArgs, err := candid.EncodeValueString(formatedRequestConcludeArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to encode conclude args: %w", err)
 	}
 
-	//output, err := execCanisterCommand(path, canIDString, "conclude", formatedRequestWithdrawalArgs, execPath)
+	canID := a.conn.PerunID
 
-	respNote, err := a.conn.Agent.CallString(canID, "conclude", encodedConcludeArgs)
+	respNote, err := a.conn.Agent.CallString(*canID, "conclude", encodedConcludeArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to call notify method: %w", err)
 	}

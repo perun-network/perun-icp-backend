@@ -2,7 +2,7 @@
 package connector
 
 import (
-	"crypto/sha512"
+	"crypto/sha256"
 	"fmt"
 	"github.com/aviate-labs/agent-go/candid"
 	"math/big"
@@ -57,7 +57,7 @@ func (f Funding) ID() (FundingID, error) {
 	if err != nil {
 		return fid, fmt.Errorf("calculating funding ID: %w", err)
 	}
-	hashSum := sha512.Sum512(data)
+	hashSum := sha256.Sum256(data)
 
 	// Copy the first 32 bytes of the hashSum to the fid variable
 	copy(fid[:], hashSum[:FIDLen])

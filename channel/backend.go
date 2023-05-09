@@ -63,6 +63,12 @@ func (*backend) Verify(addr pwallet.Address, state *pchannel.State, sig pwallet.
 	if err != nil {
 		return false, err
 	}
+
+	_, err = candid.DecodeValueString(data)
+	if err != nil {
+		return false, err
+	}
+
 	return pwallet.VerifySignature(data, sig, addr)
 }
 

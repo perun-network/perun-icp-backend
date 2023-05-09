@@ -23,6 +23,7 @@
 //     OutdatedState : text;
 //     LedgerError : text;
 // };
+
 type Error = text;
 
 type L2Account = vec nat8;
@@ -101,7 +102,7 @@ service : {
 	"conclude" : (ConcludeRequest) -> (opt Error);
 	"dispute" : (Params, FullySignedState) -> (opt Error);
 	"query_state" : (ChannelId) -> (opt RegisteredState);
-	"withdraw" : (WithdrawalRequest) -> (opt Amount, opt Error); //, blob
+	"withdraw" : (WithdrawalRequest) -> (opt Amount, opt Error);
 	"query_fid" : (Funding) -> (opt Memo) query;
 	"query_memo" : (Memo) -> (opt Memo) query;
 	"transaction_notification" : (nat64) -> ();
@@ -110,4 +111,5 @@ service : {
 	"__get_candid_interface_tmp_hack" : () -> (text) query;
 	"query_events" : (ChannelTime) -> (vec Event) query;
 	"register_event" : (vec nat8, nat64, Event) -> ();
+	"verify_sig" : (ConcludeRequest) -> (opt Error);
 };

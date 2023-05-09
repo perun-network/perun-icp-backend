@@ -138,7 +138,7 @@ func FormatVec(data []uint8) string {
 
 func FormatNotifyArgs(blocknum uint64) string {
 	fullArg := "("
-	blocknumArg := fmt.Sprintf("%d : nat64", blocknum) + " )"
+	blocknumArg := fmt.Sprintf("%d : nat64", blocknum) + ")"
 
 	fullArg += blocknumArg
 
@@ -158,6 +158,12 @@ func ExtractBlock(s string) (uint64, error) {
 	}
 
 	return value, nil
+}
+
+func FormatVerifySigArgs(addrs [][]byte, sig [][]byte, chanId []byte, version uint64, alloc []int, finalized bool) string {
+	return fmt.Sprintf(
+		"(record { participants = vec{ %s; %s} ; signatures = vec{ %s ; %s}} ; channel = blob \"%s\" ; version = %d : nat64; allocation = vec{ %d ; %d } ; finalized = %t : bool ; )",
+		FormatVec(addrs[0]), FormatVec(addrs[1]), FormatVec(sig[0]), FormatVec(sig[1]), FormatHexByte(chanId), version, alloc[0], alloc[1], finalized)
 }
 
 func FormatTransferArgs(memo, amount, fee uint64, sendTo string) string {

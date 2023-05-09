@@ -32,6 +32,37 @@ type Connector struct {
 	ExecPath ExecPath
 }
 
+func (c *Connector) VerifySig(nonce Nonce, parts []pwallet.Address, chDur uint64, chanId ChannelID, vers Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig, canID principal.Principal, execPath ExecPath) (string, error) {
+
+	addrs := make([][]byte, len(parts))
+	for i, part := range parts {
+		partMb, err := part.MarshalBinary()
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal address: %w", err)
+		}
+		addrs[i] = partMb
+	}
+	allocInts := make([]int, len(alloc.Balances[0]))
+	for i, balance := range alloc.Balances[0] {
+		allocInts[i] = int(balance.Int64()) // Convert *big.Int to int64 and then to int
+	}
+
+	formatedRequestConcludeArgs := utils.FormatConcludeArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+	path, err := exec.LookPath("dfx")
+	if err != nil {
+		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
+	}
+
+	canIDString := canID.String()
+	output, err := ExecCanisterCommand(path, canIDString, "verify_sig", formatedRequestConcludeArgs, execPath)
+
+	if err != nil {
+		return "", fmt.Errorf("failed conclude the channel: %w", err)
+	}
+
+	return output, nil
+}
+
 func (c *Connector) TransferDfxCLI(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
 	ToString := txArgs.To.String()
 	formatedTransferArgs := utils.FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, ToString)

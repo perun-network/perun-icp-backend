@@ -3,13 +3,16 @@
 package connector_test
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log"
 	"math"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	pwallet "perun.network/go-perun/wallet"
+	"perun.network/perun-icp-backend/channel"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"testing"
 
@@ -17,25 +20,81 @@ import (
 	chtest "perun.network/perun-icp-backend/channel/test"
 )
 
-func TestAdjudicator_ConcludeFinal(t *testing.T) {
+func TestConcludeDfxCLI(t *testing.T) {
 	s := test.NewSetup(t)
-	_, params, state := newAdjReq(s, true)
-	dSetup := chtest.NewDepositSetup(params, state)
-	ctx := s.NewCtx()
 
-	// Fund
-	err := chtest.FundAll(ctx, s.Funders, dSetup.FReqs)
-	assert.NoError(t, err)
-	// Withdraw
-	// {
-	// 	// Alice
-	// 	adj := chanconn.NewAdjudicator(s.Alice, s.Conns[0])
-	// 	assert.NoError(t, adj.Withdraw(ctx, req, nil))
-	// 	req.Idx = 1
-	// 	req.Acc = s.Bob
-	// 	adj = chanconn.NewAdjudicator(s.Bob, s.Conns[1])
-	// 	assert.NoError(t, adj.Withdraw(ctx, req, nil))
-	// }
+	err := s.Setup.DfxSetup.StartDeployDfx()
+	require.NoError(t, err, "Failed to start and deploy DFX environment")
+	defer func() {
+		err := s.Setup.DfxSetup.StopDFX()
+		assert.NoError(t, err, "Failed to stop DFX environment")
+	}()
+
+	params, state := s.NewRandomParamAndState()
+	dSetup := chtest.NewDepositSetup(params, state)
+
+	err = chtest.FundAll(context.Background(), s.Funders, dSetup.FReqs)
+	require.NoError(t, err)
+
+	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
+	require.NoError(t, err)
+	dReqFunding := wReq.Funding
+
+	dfxState, err := chanconn.NewState(state)
+	sigs := s.SignState(dfxState)
+
+	require.NoError(t, err)
+
+	var nonceArray [32]byte
+	copy(nonceArray[:], params.Nonce.Bytes())
+	statefinal := state.IsFinal
+	alloc := state.Allocation
+	chanId := dReqFunding.Channel
+	adj := s.Adjs[0]
+
+	outpConclude, err := adj.ConcludeDfxCLI(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
+	if err != nil {
+		log.Fatalf("Failed to conclude via DFX CLI: %v", err)
+	}
+
+	assert.Equal(t, "(opt \"successful concluding\")\n", outpConclude)
+}
+
+func TestConcludeAgentGO(t *testing.T) {
+	s := test.NewSetup(t)
+
+	err := s.Setup.DfxSetup.StartDeployDfx()
+	require.NoError(t, err, "Failed to start and deploy DFX environment")
+	defer func() {
+		err := s.Setup.DfxSetup.StopDFX()
+		assert.NoError(t, err, "Failed to stop DFX environment")
+	}()
+
+	params, state := s.NewRandomParamAndState()
+	dSetup := chtest.NewDepositSetup(params, state)
+
+	err = chtest.FundAll(context.Background(), s.Funders, dSetup.FReqs)
+	require.NoError(t, err)
+
+	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
+	require.NoError(t, err)
+	dReqFunding := wReq.Funding
+
+	dfxState, err := chanconn.NewState(state)
+	sigs := s.SignState(dfxState)
+
+	require.NoError(t, err)
+
+	var nonceArray [32]byte
+	copy(nonceArray[:], params.Nonce.Bytes())
+	statefinal := state.IsFinal
+	alloc := state.Allocation
+	chanId := dReqFunding.Channel
+	adj := s.Adjs[0]
+
+	outpConclude, err := adj.ConcludeAgentGo(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
+	require.NoError(t, err)
+	assert.Equal(t, "(opt \"successful concluding\")\n", outpConclude)
 }
 
 func newAdjReq(s *test.Setup, final bool) (pchannel.AdjudicatorReq, *pchannel.Params, *pchannel.State) {

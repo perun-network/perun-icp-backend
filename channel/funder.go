@@ -13,6 +13,7 @@ import (
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	utils "perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
+
 	"time"
 )
 
@@ -55,9 +56,7 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 		return fmt.Errorf("failed to get memo from funding: %w", err)
 	}
 
-	perunID := d.cnr.PerunID
-	ExecPath := d.cnr.ExecPath
-	depositResult, err := d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *perunID, ExecPath)
+	depositResult, err := d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *d.cnr.PerunID, d.cnr.ExecPath)
 	if err != nil {
 		return fmt.Errorf("failed to deposit to perun channel: %w", err)
 	}
@@ -68,6 +67,8 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 }
 
 func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
+
+	// timestamp the funding procedure
 	tstamp := time.Now().UnixNano()
 
 	wReq, err := NewDepositReqFromPerun(&req, f.acc)
@@ -78,6 +79,7 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	if err := NewDepositor(f.conn).Deposit(ctx, wReq); err != nil {
 		return err
 	}
+
 	chanID := wReq.Funding.Channel
 
 	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
@@ -101,9 +103,7 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 		}
 	}()
 
-	//timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(req.Params.ChallengeDuration)*time.Second)
-	//defer cancel()
-	return nil //f.waitforFundings(context.TODO(), evli, req)
+	return nil
 }
 
 func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, req pchannel.FundingReq) error {
@@ -162,6 +162,22 @@ func NewDepositReq(bal, fee pchannel.Bal, acc wallet.Account, funding chanconn.F
 // NewDepositor returns a new Depositor.
 func NewDepositor(cnr *chanconn.Connector) *Depositor {
 	return &Depositor{log.MakeEmbedding(log.Default()), cnr}
+}
+
+func (d *Depositor) VerifySig(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig) (string, error) {
+
+	execPath := d.cnr.ExecPath
+	canID := d.cnr.PerunID
+	verifyResult, err := d.cnr.VerifySig(nonce, parts, chDur, chanId, vers, alloc, finalized, sigs, *canID, execPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to build deposit: %w", err)
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("failed to get memo from funding: %w", err)
+	}
+
+	return verifyResult, nil
 }
 
 type Depositor struct {
