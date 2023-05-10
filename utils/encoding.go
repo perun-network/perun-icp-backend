@@ -66,7 +66,7 @@ func FormatStateArgs(chanId []byte, version uint64, alloc []uint64, finalized bo
 
 // gwjf3-rxk3d-lfwux-5evls-qw4gc-fyh4e-ohkeg-zg32g-vqfcw-yaaqs-tqe
 func FormatWithdrawalArgs(addr, chanId, sig []byte) string { //, prince string
-	return fmt.Sprintf("(record { channel = blob \"%s\"; participant = %s ; receiver = principal \"gwjf3-rxk3d-lfwux-5evls-qw4gc-fyh4e-ohkeg-zg32g-vqfcw-yaaqs-tqe\" ; signature = %s})", FormatHexByte(chanId), FormatVec(addr), FormatVec(sig))
+	return fmt.Sprintf("(record { channel = blob \"%s\"; participant = %s ; receiver = principal \"exqrz-uemtb-qnd6t-mvbn7-mxjre-bodlr-jnqql-tnaxm-ur6uc-mmgb4-jqe\" ; signature = %s})", FormatHexByte(chanId), FormatVec(addr), FormatVec(sig))
 }
 
 func FormatConcludeArgs(nonce []byte, addrs [][]byte, chDur uint64, chanId []byte, version uint64, alloc []int, finalized bool, sig [][]byte) string { //, prince string

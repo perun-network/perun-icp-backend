@@ -18,7 +18,7 @@ type Setup struct {
 
 func NewSetup(t *testing.T) *Setup {
 
-	s := chtest.NewSetup(t)
+	s := chtest.NewMinterSetup(t)
 	c := s.Conns
 
 	ret := &Setup{Setup: s}

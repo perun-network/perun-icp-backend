@@ -100,7 +100,8 @@ service : {
 	"deposit_memo" : (FundMem) -> (opt Error);
 	"query_holdings" : (Funding) -> (opt Amount) query;
 	"conclude" : (ConcludeRequest) -> (opt Error);
-	"dispute" : (Params, FullySignedState) -> (opt Error);
+	//"dispute" : (Params, FullySignedState) -> (opt Error);
+	"dispute" : (ConcludeRequest) -> (opt Error);
 	"query_state" : (ChannelId) -> (opt RegisteredState);
 	"withdraw" : (WithdrawalRequest) -> (opt Amount, opt Error);
 	"query_fid" : (Funding) -> (opt Memo) query;

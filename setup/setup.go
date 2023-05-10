@@ -104,6 +104,7 @@ func DeployCanisters(path, execPath string) error {
 }
 
 func createLedgerArg() string {
+	//dfx ledger account-id
 	const (
 		ICP_PERUN_MINT_ACC  = "433bd8e9dd65bdfb34259667578e749136f3e0ea1566e10af1e0dd324cbd9144"
 		ICP_PERUN_USERA_ACC = "97520b79b03e38d3f6b38ce5026a813ccc9d1a3e830edb6df5970e6ca6ad84be"

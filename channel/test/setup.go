@@ -46,7 +46,7 @@ func NewRandL2Account() (wallet.Account, error) {
 	return acc, nil
 }
 
-func NewSetup(t *testing.T) *Setup {
+func NewMinterSetup(t *testing.T) *Setup {
 
 	testConfig := setup.DfxConfig{
 		Host:        "http://127.0.0.1",

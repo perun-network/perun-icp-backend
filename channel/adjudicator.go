@@ -45,6 +45,39 @@ func NewAdjudicator(acc *wallet.Account, c *chanconn.Connector) *Adjudicator {
 	}
 }
 
+func (a *Adjudicator) Dispute(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig) (string, error) {
+
+	addrs := make([][]byte, len(parts))
+	for i, part := range parts {
+		partMb, err := part.MarshalBinary()
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal address: %w", err)
+		}
+		addrs[i] = partMb
+	}
+	allocInts := make([]int, len(alloc.Balances[0]))
+	for i, balance := range alloc.Balances[0] {
+		allocInts[i] = int(balance.Int64())
+	}
+
+	formatedRequestConcludeArgs := utils.FormatConcludeArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+	path, err := exec.LookPath("dfx")
+	if err != nil {
+		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
+	}
+
+	canID := a.conn.PerunID
+	canIDString := canID.String()
+	execPath := a.conn.ExecPath
+	output, err := chanconn.ExecCanisterCommand(path, canIDString, "dispute", formatedRequestConcludeArgs, execPath)
+
+	if err != nil {
+		return "", fmt.Errorf("failed a dispute call: %w", err)
+	}
+
+	return output, nil
+}
+
 func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig) (string, error) {
 
 	addrs := make([][]byte, len(parts))
@@ -57,7 +90,7 @@ func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Addre
 	}
 	allocInts := make([]int, len(alloc.Balances[0]))
 	for i, balance := range alloc.Balances[0] {
-		allocInts[i] = int(balance.Int64()) // Convert *big.Int to int64 and then to int
+		allocInts[i] = int(balance.Int64())
 	}
 
 	formatedRequestConcludeArgs := utils.FormatConcludeArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
@@ -94,6 +127,8 @@ func (a *Adjudicator) ConcludeAgentGo(nonce chanconn.Nonce, parts []pwallet.Addr
 	}
 
 	formatedRequestConcludeArgs := utils.FormatConcludeArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+
+	fmt.Println("formatedRequestConcludeArgs", formatedRequestConcludeArgs)
 
 	encodedConcludeArgs, err := candid.EncodeValueString(formatedRequestConcludeArgs)
 	if err != nil {
