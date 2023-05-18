@@ -4,6 +4,7 @@ package wallet
 
 import (
 	"bytes"
+	cr "crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -49,6 +50,14 @@ func NewRAMWallet(gen io.Reader) (*FsWallet, error) {
 	}
 
 	return &w, nil
+}
+
+func NewWallet() *FsWallet {
+	wlt, err := NewRAMWallet(cr.Reader)
+	if err != nil {
+		panic(err)
+	}
+	return wlt
 }
 
 // CreateOrLoadFsWallet loads the wallet from the requested path, otherwise, it

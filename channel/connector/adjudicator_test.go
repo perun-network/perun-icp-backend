@@ -58,7 +58,9 @@ func TestConcludeDfxCLI(t *testing.T) {
 		log.Fatalf("Failed to conclude via DFX CLI: %v", err)
 	}
 
-	assert.Equal(t, "(opt \"successful concluding\")\n", outpConclude)
+	assert.Equal(t, "(opt \"successful concluding the channel\")\n", outpConclude)
+
+	fmt.Println("Concluded channel via DFX CLI: ", outpConclude)
 
 	err = s.Setup.DfxSetup.StopDFX()
 	assert.NoError(t, err, "Failed to stop DFX environment")
@@ -138,7 +140,7 @@ func TestConcludeWithdraw(t *testing.T) {
 		log.Fatalf("Failed to conclude via DFX CLI: %v", err)
 	}
 
-	assert.Equal(t, "(opt \"successful concluding\")\n", outpConclude)
+	assert.Equal(t, "(opt \"successful concluding the channel\")\n", outpConclude)
 	fmt.Println("outp: ", outpConclude)
 
 	execPathTyped := chanconn.NewExecPath("./../../test/testdata/")
@@ -194,9 +196,10 @@ func TestDispute(t *testing.T) {
 
 	outpDispute, err := adj.Dispute(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
 	if err != nil {
-		log.Fatalf("Failed to conclude via DFX CLI: %v", err)
+		log.Fatalf("Failed to dispute: %v", err)
 	}
-	assert.Equal(t, "(opt \"successful disputing\")\n", outpDispute)
+	assert.Equal(t, "(opt \"successful initialization of a dispute\")\n", outpDispute)
+	fmt.Println("outp: ", outpDispute)
 
 	err = s.Setup.DfxSetup.StopDFX()
 	assert.NoError(t, err, "Failed to stop DFX environment")

@@ -10,6 +10,9 @@ import (
 )
 
 // "./.config/.dfx/identities/minter/identity.pem", // minter test identity generated with keysmith:
+// keysmith generate
+// keysmith private-key
+// -> this generates a seed.txt, then uses the seed.txt to generate the identity.pem
 // https://github.com/dfinity/keysmith and imported with dfx 0.13.1
 
 type DfxConfig struct {
@@ -17,6 +20,13 @@ type DfxConfig struct {
 	Port        int
 	ExecPath    string
 	AccountPath string // use local path to a minter .pem file
+}
+
+type UserConfig struct {
+	Host        string
+	Port        int
+	Balance     uint64
+	AccountPath string
 }
 
 type Dfx struct {

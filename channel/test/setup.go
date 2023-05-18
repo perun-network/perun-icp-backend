@@ -8,12 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"math"
 	"math/rand"
-	"perun.network/go-perun/log"
 
 	"path/filepath"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	"perun.network/perun-icp-backend/channel"
+	"perun.network/perun-icp-backend/client"
+
 	"perun.network/perun-icp-backend/setup"
 	"perun.network/perun-icp-backend/utils"
 
@@ -32,7 +33,7 @@ const BlockTime = 0.04
 var DefaultTestTimeout = 20
 
 type FundingListParams struct {
-	Users             []*channel.PerunUser
+	Users             []*client.PerunUser
 	ChallengeDuration uint64
 }
 
@@ -55,6 +56,9 @@ func NewMinterSetup(t *testing.T) *Setup {
 		AccountPath: filepath.Join(utils.SetHomeDir(), ".config", "dfx", "identity", "minter", "identity.pem"),
 	}
 
+	perunID := "r7inp-6aaaa-aaaaa-aaabq-cai"
+	ledgerID := "rrkah-fqaaa-aaaaa-aaaaq-cai"
+
 	dfx := setup.NewDfxSetup(testConfig)
 	acc1, err := NewRandL2Account()
 	if err != nil {
@@ -65,41 +69,41 @@ func NewMinterSetup(t *testing.T) *Setup {
 		t.Fatal("Error generating random account 2:", err)
 	}
 	accs := []wallet.Account{acc1, acc2}
-	conn1 := NewConnector(testConfig)
-	conn2 := NewConnector(testConfig)
+	conn1 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.ExecPath, testConfig.Host, testConfig.Port)
+	conn2 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.ExecPath, testConfig.Host, testConfig.Port)
 	conns := []*chanconn.Connector{conn1, conn2}
 
 	return &Setup{t, pkgtest.Prng(t), accs, accs[0], accs[1], dfx, conns} //, chanConn}
 }
 
-func NewConnector(config setup.DfxConfig) *chanconn.Connector {
+// func NewConnector(config setup.DfxConfig) *chanconn.Connector {
 
-	newAgent, err := channel.NewAgent(config)
-	if err != nil {
-		panic(err)
-	}
+// 	newAgent, err := client.NewAgent(config)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	recipPerunID, err := utils.DecodePrincipal("r7inp-6aaaa-aaaaa-aaabq-cai")
-	if err != nil {
-		panic(err)
-	}
+// 	recipPerunID, err := utils.DecodePrincipal("r7inp-6aaaa-aaaaa-aaabq-cai")
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	recipLedgerID, err := utils.DecodePrincipal("rrkah-fqaaa-aaaaa-aaaaq-cai")
-	if err != nil {
-		panic(err)
-	}
+// 	recipLedgerID, err := utils.DecodePrincipal("rrkah-fqaaa-aaaaa-aaaaq-cai")
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	chanConn := &chanconn.Connector{
-		Agent:    newAgent,
-		Log:      log.MakeEmbedding(log.Default()),
-		Source:   chanconn.NewEventSource(),
-		PerunID:  recipPerunID,
-		LedgerID: recipLedgerID,
-		ExecPath: chanconn.ExecPath(config.ExecPath),
-	}
+// 	chanConn := &chanconn.Connector{
+// 		Agent:    newAgent,
+// 		Log:      log.MakeEmbedding(log.Default()),
+// 		Source:   chanconn.NewEventSource(),
+// 		PerunID:  recipPerunID,
+// 		LedgerID: recipLedgerID,
+// 		ExecPath: chanconn.ExecPath(config.ExecPath),
+// 	}
 
-	return chanConn
-}
+// 	return chanConn
+// }
 
 type Setup struct {
 	T   *testing.T

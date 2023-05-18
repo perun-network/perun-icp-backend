@@ -26,7 +26,6 @@
 
 type Error = text;
 
-type L2Account = vec nat8;
 type Timestamp = nat64;
 type Duration = nat64;
 type Hash = vec nat8;
@@ -35,6 +34,7 @@ type ChannelId = Hash;
 type Amount = nat;
 type Memo = nat64;
 type Signature = Hash;
+type L2Account = Hash; //vec nat8;
 
 type Funding = record { channel : ChannelId; participant : L2Account };
 type FundMem = record {

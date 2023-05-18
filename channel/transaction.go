@@ -47,21 +47,3 @@ func QueryCandidCLI(queryStateArgs string, canID string, execPath string) error 
 
 	return nil
 }
-
-func QueryStateCLI(queryStateArgs string, canID string, execPath string) error {
-	// Query the state of the Perun canister
-
-	path, err := exec.LookPath("dfx")
-	if err != nil {
-		return fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
-	}
-
-	txCmd := exec.Command(path, "canister", "call", canID, "query_state", queryStateArgs)
-	txCmd.Dir = execPath
-	output, err := txCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
-	}
-
-	return nil
-}

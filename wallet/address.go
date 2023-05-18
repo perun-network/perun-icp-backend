@@ -6,9 +6,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-
 	ed "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
 	"perun.network/go-perun/wallet"
+	_ "perun.network/go-perun/wire"
 )
 
 // Address is an ed25519 public key and represents a perun off-chain
@@ -49,4 +49,8 @@ func (a Address) Equal(b wallet.Address) bool {
 
 func (a Address) Cmp(b wallet.Address) int {
 	return bytes.Compare(a[:], (*b.(*Address))[:])
+}
+
+func AsAddr(acc wallet.Address) *Address {
+	return acc.(*Address)
 }

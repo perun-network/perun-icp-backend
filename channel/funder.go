@@ -124,9 +124,9 @@ func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, 
 	}
 }
 
-func NewFunder(acc *wallet.Account, c *chanconn.Connector) *Funder {
+func NewFunder(acc wallet.Account, c *chanconn.Connector) *Funder {
 	return &Funder{
-		acc:  acc,
+		acc:  &acc,
 		conn: c,
 		log:  log.MakeEmbedding(log.Default()),
 	}
