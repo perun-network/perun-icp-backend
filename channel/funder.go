@@ -40,9 +40,9 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 		return fmt.Errorf("failed to build deposit: %w", err)
 	}
 
-	blockNum, err := d.cnr.ExecuteDFXTransfer(depositArgs, *d.cnr.LedgerID, d.cnr.ExecPath, d.cnr.TransferDfxCLI)
+	blockNum, err := d.cnr.ExecuteDFXTransfer(depositArgs, *d.cnr.LedgerID, d.cnr.ExecPath, d.cnr.TransferDfx)
 	if err != nil {
-		return fmt.Errorf("failed to execute DFX transfer: %w", err)
+		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
 	}
 
 	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
@@ -62,6 +62,46 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 	}
 
 	fmt.Println("depositResult: ", depositResult)
+
+	return nil
+}
+
+func (f *Funder) FundAG(ctx context.Context, req pchannel.FundingReq) error {
+
+	// timestamp the funding procedure
+	tstamp := time.Now().UnixNano()
+
+	wReq, err := NewDepositReqFromPerun(&req, f.acc)
+
+	if err != nil {
+		return err
+	}
+	if err := NewDepositor(f.conn).Deposit(ctx, wReq); err != nil {
+		return err
+	}
+
+	chanID := wReq.Funding.Channel
+
+	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
+
+	eventsString, err := f.conn.QueryEventsCLI(qEventsvArgs, *f.conn.PerunID, f.conn.ExecPath)
+	if err != nil {
+		return fmt.Errorf("Error for parsing channel events: %v", err)
+	}
+
+	eventList, err := chanconn.StringIntoEvents(eventsString)
+	if err != nil {
+		return fmt.Errorf("Error for parsing channel events: %v", err)
+	}
+
+	evli := make(chan chanconn.Event, 1)
+
+	go func() {
+		for _, event := range eventList {
+			evli <- event
+			fmt.Println("Event registered: ", event)
+		}
+	}()
 
 	return nil
 }

@@ -5,13 +5,70 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"log"
+	"net/url"
+
+	"github.com/aviate-labs/agent-go/identity"
+
+	"github.com/aviate-labs/agent-go/principal"
+
+	"github.com/aviate-labs/agent-go/ledger"
+
 	"perun.network/perun-icp-backend/channel"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/test"
 	chtest "perun.network/perun-icp-backend/channel/test"
+	"perun.network/perun-icp-backend/setup"
 
 	"testing"
 )
+
+func TestLedgerAgent(t *testing.T) {
+	ledgerTestConfig := setup.DfxConfig{
+		Host:        "http://127.0.0.1",
+		Port:        8000,
+		ExecPath:    "./../../test/testdata/",
+		AccountPath: "./test/testdata/identities/minter_identity.pem",
+	}
+
+	ledgerPrincipal := "rrkah-fqaaa-aaaaa-aaaaq-cai"
+
+	canId, err := principal.Decode(ledgerPrincipal)
+	if err != nil {
+		t.Fatalf("Failed to decode principal: %v", err)
+	}
+
+	url, err := url.Parse("http://127.0.0.1:8000")
+	if err != nil {
+		t.Fatalf("Failed to parse URL: %v", err)
+	}
+
+	dfx := setup.NewDfxSetup(ledgerTestConfig)
+
+	err = dfx.StartDeployDfx()
+	if err != nil {
+		t.Fatalf("Failed to start Dfx: %v", err)
+	}
+
+	id, err := identity.NewRandomSecp256k1Identity()
+	if err != nil {
+		t.Fatalf("Failed to create new identity: %v", err)
+	}
+
+	a := ledger.NewWithIdentity(canId, url, id)
+	tokens, err := a.AccountBalance(ledger.AccountBalanceArgs{
+		Account: principal.AnonymousID.AccountIdentifier(principal.DefaultSubAccount),
+	})
+	if err != nil {
+		t.Fatalf("Failed to get account balance: %v", err)
+	}
+
+	t.Logf("check tokens: %v", tokens)
+
+	err = dfx.StopDFX()
+	if err != nil {
+		t.Fatalf("Failed to stop Dfx: %v", err)
+	}
+}
 
 func TestQueryPerun(t *testing.T) {
 	s := test.NewSetup(t)
@@ -29,7 +86,7 @@ func TestQueryPerun(t *testing.T) {
 
 }
 
-func TestDeposit(t *testing.T) {
+func TestDepositCLI(t *testing.T) {
 	s := test.NewSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
@@ -44,6 +101,24 @@ func TestDeposit(t *testing.T) {
 	dSetup := chtest.NewDepositSetup(params, state)
 
 	err = chtest.FundAll(s.NewCtx(), s.Funders, dSetup.FReqs)
+	require.NoError(t, err)
+}
+
+func TestDepositAG(t *testing.T) {
+	s := test.NewSetup(t)
+
+	err := s.Setup.DfxSetup.StartDeployDfx()
+	require.NoError(t, err, "Failed to start and deploy DFX environment")
+
+	defer func() {
+		err := s.Setup.DfxSetup.StopDFX()
+		assert.NoError(t, err, "Failed to stop DFX environment")
+	}()
+
+	params, state := s.NewRandomParamAndState()
+	dSetup := chtest.NewDepositSetup(params, state)
+
+	err = chtest.FundAllAG(s.NewCtx(), s.Funders, dSetup.FReqs)
 	require.NoError(t, err)
 }
 

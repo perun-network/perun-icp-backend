@@ -157,6 +157,7 @@ func queryFundingMemoCLI(depositArgs DepositArgs, canID string, execPath string)
 
 func (c *Connector) ExecuteDFXTransfer(txArgs TxArgs, ledgerID principal.Principal, execPath ExecPath, transferFn TransferFunction) (BlockNum, error) {
 	transferFirstOutput, err := transferFn(txArgs, ledgerID, execPath)
+
 	if err != nil {
 		return 0, fmt.Errorf("error for first DFX transfer: %v", err)
 	}
@@ -278,9 +279,32 @@ func QueryFidCLI(queryFidArgs DepositArgs, canID string, execPath string) (fid u
 	return memo, nil
 }
 
-func (c *Connector) TransferDfxCLI(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
+func (c *Connector) TransferDfxAG(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
 	ToString := txArgs.To.String()
 	formatedTransferArgs := utils.FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, ToString)
+
+	encodedTransferArgs, err := candid.EncodeValueString(formatedTransferArgs)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to encode transfer arguments: %w", err)
+	}
+	fmt.Println("encodedTransferArgs for funding: ", encodedTransferArgs)
+	respNote, err := c.Agent.CallString(canID, "transfer", encodedTransferArgs)
+	if err != nil {
+		return "", fmt.Errorf("failed to call notify method: %w", err)
+	}
+
+	fmt.Println("formatedTransferArgs for funding: ", formatedTransferArgs)
+
+	fmt.Println("output from transfer: ", string(respNote))
+
+	return string(respNote), nil
+}
+
+func (c *Connector) TransferDfx(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
+	ToString := txArgs.To.String()
+	formatedTransferArgs := utils.FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, ToString)
+	fmt.Println("formatedTransferArgs for funding: ", formatedTransferArgs)
 	path, err := exec.LookPath("dfx")
 	canIDString := canID.Encode()
 	if err != nil {

@@ -16,6 +16,16 @@ func FundAll(ctx context.Context, funders []*channel.Funder, reqs []*pchannel.Fu
 		}
 
 	}
+	return nil
+}
 
+func FundAllAG(ctx context.Context, funders []*channel.Funder, reqs []*pchannel.FundingReq) error {
+	for i := range funders {
+		err := funders[i].FundAG(ctx, *reqs[i])
+		if err != nil {
+			return err
+		}
+
+	}
 	return nil
 }

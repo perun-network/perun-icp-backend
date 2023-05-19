@@ -71,7 +71,7 @@ func FormatWithdrawalArgs(addr, chanId, sig []byte) string { //, prince string
 
 func FormatConcludeCLIArgs(nonce []byte, addrs [][]byte, chDur uint64, chanId []byte, version uint64, alloc []int, finalized bool, sig [][]byte) string { //, prince string
 	return fmt.Sprintf(
-		"(record { nonce = blob \"%s\"; participants = vec{ %s; %s} ; challenge_duration = %d: nat64 ; channel = blob \"%s\" ; version = %d : nat64; allocation = vec{ %d : nat ; %d : nat } ; finalized = %t : bool ; sigs = vec{ %s ; %s}})",
+		"(record { nonce = blob \"%s\"; participants = vec{ %s ; %s } ; challenge_duration = %d: nat64 ; channel = blob \"%s\" ; version = %d : nat64; allocation = vec{ %d : nat ; %d : nat } ; finalized = %t : bool ; sigs = vec{ %s ; %s}})",
 		FormatHexByte(nonce), FormatVec(addrs[0]), FormatVec(addrs[1]), chDur, FormatHexByte(chanId), version, alloc[0], alloc[1], finalized, FormatVec(sig[0]), FormatVec(sig[1]))
 }
 
@@ -170,7 +170,7 @@ func FormatTransferArgs(memo, amount, fee uint64, sendTo string) string {
 	var builder strings.Builder
 
 	builder.WriteString(fmt.Sprintf(
-		"(record {memo = %d : nat64; amount = record { e8s=%s : nat64}; fee = record { e8s=%s : nat64}; from_subaccount = null; to = blob\"%s\"; created_at_time = null; })",
+		"(record {memo = %d : nat64; amount = record { e8s=%s : nat64}; fee = record { e8s=%s : nat64}; from_subaccount = null; to = blob \"%s\"; created_at_time = null; })",
 		memo,
 		FormatWithUnderscores(amount),
 		FormatWithUnderscores(fee),
