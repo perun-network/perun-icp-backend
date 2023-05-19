@@ -55,8 +55,13 @@ func TestLedgerAgent(t *testing.T) {
 	}
 
 	a := ledger.NewWithIdentity(canId, url, id)
+	prID, err := principal.Decode("exqrz-uemtb-qnd6t-mvbn7-mxjre-bodlr-jnqql-tnaxm-ur6uc-mmgb4-jqe")
+	if err != nil {
+		t.Fatalf("Failed to decode principal: %v", err)
+	}
+	accID := prID.AccountIdentifier(principal.DefaultSubAccount)
 	tokens, err := a.AccountBalance(ledger.AccountBalanceArgs{
-		Account: principal.AnonymousID.AccountIdentifier(principal.DefaultSubAccount),
+		Account: accID,
 	})
 	if err != nil {
 		t.Fatalf("Failed to get account balance: %v", err)
