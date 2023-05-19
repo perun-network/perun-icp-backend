@@ -31,11 +31,16 @@ func Conclude(nonce Nonce, parts []pwallet.Address, chDur uint64, chanId Channel
 		allocInts[i] = int(balance.Int64()) // Convert *big.Int to int64 and then to int
 	}
 
-	formatedRequestWithdrawalArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+	formatedRequestWithdrawalArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:])    //finalized
+	formatedRequestWithdrawalArgsTEST := utils.FormatConcludeAGArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}
+
+	fmt.Println("formatedRequestWithdrawalArgs: ", formatedRequestWithdrawalArgs)
+	fmt.Println("formatedRequestWithdrawalArgsTEST: ", formatedRequestWithdrawalArgsTEST)
 
 	canIDString := canID.Encode()
 

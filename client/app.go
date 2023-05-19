@@ -20,7 +20,7 @@ func SetupPaymentClient(
 	bus wire.Bus, // bus is used of off-chain communication.
 	w *wallet.FsWallet, // w is the wallet used to resolve addresses to accounts for channels.
 	//acc wallet.Account, // acc is the account to be used for signing transactions.
-	nodeURL string, // nodeURL is the URL of the blockchain node.
+	//nodeURL string, // nodeURL is the URL of the blockchain node.
 	perunID string,
 	ledgerID string,
 	host string, // networkId is the identifier of the blockchain.
@@ -49,8 +49,8 @@ func SetupPaymentClient(
 	}
 
 	// Setup Perun client.
-	waddr := *icwallet.AsAddr(acc.Address())
-	wireaddr := icwire.Address{Address: &waddr}
+	waddr := icwallet.AsAddr(acc.Address())
+	wireaddr := &icwire.Address{Address: waddr}
 	perunClient, err := client.New(wireaddr, bus, funder, adj, w, watcher)
 	if err != nil {
 		return nil, errors.WithMessage(err, "creating client")

@@ -13,6 +13,22 @@ import (
 	"testing"
 )
 
+func TestQueryPerun(t *testing.T) {
+	s := test.NewSetup(t)
+	err := s.Setup.DfxSetup.StartDeployDfx()
+	require.NoError(t, err, "Failed to start and deploy DFX environment")
+
+	defer func() {
+		err := s.Setup.DfxSetup.StopDFX()
+		assert.NoError(t, err, "Failed to stop DFX environment")
+	}()
+
+	perunID := "r7inp-6aaaa-aaaaa-aaabq-cai"
+	err = channel.QueryCandidCLI("()", perunID, "./../../test/testdata/")
+	require.NoError(t, err, "Failed to query Perun ID")
+
+}
+
 func TestDeposit(t *testing.T) {
 	s := test.NewSetup(t)
 

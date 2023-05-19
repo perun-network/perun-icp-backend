@@ -39,7 +39,7 @@ func (c *PaymentClient) HandleProposal(p client.ChannelProposal, r *client.Propo
 
 	// Create a channel accept message and send it.
 	accept := lcp.Accept(
-		&c.account,               // The account we use in the channel.
+		c.account,                // The account we use in the channel.
 		client.WithRandomNonce(), // Our share of the channel nonce.
 	)
 	ch, err := r.Accept(context.TODO(), accept)

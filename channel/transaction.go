@@ -44,6 +44,7 @@ func QueryCandidCLI(queryStateArgs string, canID string, execPath string) error 
 	if err != nil {
 		return fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
 	}
+	fmt.Println("Query output: ", string(output))
 
 	return nil
 }

@@ -3,6 +3,7 @@
 package client
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"github.com/aviate-labs/agent-go"
@@ -14,13 +15,15 @@ import (
 	"path/filepath"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
-	//"perun.network/go-perun/wire"
+	"perun.network/go-perun/wire"
 
+	"math/big"
+	"perun.network/go-perun/wallet"
+	icchannel "perun.network/perun-icp-backend/channel"
 	"perun.network/perun-icp-backend/setup"
-
 	"perun.network/perun-icp-backend/utils"
-	"perun.network/perun-icp-backend/wallet"
-	//icwire "perun.network/perun-icp-backend/wire"
+	icwallet "perun.network/perun-icp-backend/wallet"
+	icwire "perun.network/perun-icp-backend/wire"
 )
 
 // type UserClient struct {
@@ -52,7 +55,7 @@ type PaymentClient struct {
 }
 
 func (u *PerunUser) NewL2Account() (wallet.Account, error) {
-	wlt, err := wallet.NewRAMWallet(rand.Reader)
+	wlt, err := icwallet.NewRAMWallet(rand.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -178,77 +181,59 @@ func (c *PaymentClient) startWatching(ch *client.Channel) {
 	}()
 }
 
-// // OpenChannel opens a new channel with the specified peer and funding.
-// func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) *PaymentChannel {
-// 	// We define the channel participants. The proposer has always index 0. Here
-// 	// we use the on-chain addresses as off-chain addresses, but we could also
-// 	// use different ones.
-// 	participants := []wire.Address{c.account, peer}
-
-// 	// We create an initial allocation which defines the starting balances.
-// 	initBal := DotToPlanck(big.NewFloat(amount))
-// 	initAlloc := channel.NewAllocation(2, dotchannel.Asset)
-// 	initAlloc.SetAssetBalances(dotchannel.Asset, []channel.Bal{
-// 		initBal, // Our initial balance.
-// 		initBal, // Peer's initial balance.
-// 	})
-
-// 	// Prepare the channel proposal by defining the channel parameters.
-// 	challengeDuration := uint64(10) // On-chain challenge duration in seconds.
-// 	proposal, err := client.NewLedgerChannelProposal(
-// 		challengeDuration,
-// 		c.account,
-// 		initAlloc,
-// 		participants,
-// 	)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	// Send the proposal.
-// 	ch, err := c.perunClient.ProposeChannel(context.TODO(), proposal)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	// Start the on-chain event watcher. It automatically handles disputes.
-// 	c.startWatching(ch)
-
-// 	return newPaymentChannel(ch, c.currency)
-// }
-
 // OpenChannel opens a new channel with the specified peer and funding.
-// func (c *PaymentClient) OpenChannel(peer wire.Address, balances channel.Balances) *PaymentChannel {
-// 	// We define the channel participants. The proposer has always index 0. Here
-// 	// we use the on-chain addresses as off-chain addresses, but we could also
-// 	// use different ones.
-// 	wireAddr := &icwire.Address{Address: &c.account}
-// 	participants := []wire.Address{wireAddr, peer}
+func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) *PaymentChannel {
+	// We define the channel participants. The proposer has always index 0. Here
+	// we use the on-chain addresses as off-chain addresses, but we could also
+	// use different ones.
+	waddr := *icwallet.AsAddr(c.account)
+	wireaddr := &icwire.Address{Address: &waddr}
 
-// 	// We create an initial allocation which defines the starting balances.
-// 	initAlloc := channel.NewAllocation(2, c.currencies[0], c.currencies[1])
-// 	initAlloc.Balances = balances
+	participants := []wire.Address{wireaddr, peer}
 
-// 	// Prepare the channel proposal by defining the channel parameters.
-// 	challengeDuration := uint64(10) // On-chain challenge duration in seconds.
-// 	proposal, err := client.NewLedgerChannelProposal(
-// 		challengeDuration,
-// 		&c.account,
-// 		initAlloc,
-// 		participants,
-// 	)
-// 	if err != nil {
-// 		panic(err)
-// 	}
+	// We create an initial allocation which defines the starting balances.
+	initBal := big.NewInt(int64(amount))
 
-// 	// Send the proposal.
-// 	ch, err := c.perunClient.ProposeChannel(context.TODO(), proposal)
-// 	if err != nil {
-// 		panic(err)
-// 	}
+	initAlloc := channel.NewAllocation(2, icchannel.Asset)
+	initAlloc.SetAssetBalances(icchannel.Asset, []channel.Bal{
+		initBal, // Our initial balance.
+		initBal, // Peer's initial balance.
+	})
 
-// 	// Start the on-chain event watcher. It automatically handles disputes.
-// 	c.startWatching(ch)
+	// Prepare the channel proposal by defining the channel parameters.
+	challengeDuration := uint64(10) // On-chain challenge duration in seconds.
+	proposal, err := client.NewLedgerChannelProposal(
+		challengeDuration,
+		c.account,
+		initAlloc,
+		participants,
+	)
+	if err != nil {
+		panic(err)
+	}
 
-// 	return newSwapChannel(ch, c.currencies)
+	// Send the proposal.
+	ch, err := c.perunClient.ProposeChannel(context.TODO(), proposal)
+	if err != nil {
+		panic(err)
+	}
+
+	// Start the on-chain event watcher. It automatically handles disputes.
+	c.startWatching(ch)
+
+	return newPaymentChannel(ch, c.currency)
+}
+
+// WireAddress returns the wire address of the client.
+func (c *PaymentClient) WireAddress() *icwire.Address {
+	waddr := icwallet.AsAddr(c.account)
+	return &icwire.Address{Address: waddr}
+}
+
+// // WalletAddress returns the wallet address of the client.
+// func (c *PaymentClient) WalletAddress() wallet.Address {
+// 	return wallet.Address(*c.account.(*icwallet.Address))
 // }
+
+// waddr := *icwallet.AsAddr(acc.Address())
+// wireaddr := icwire.Address{Address: &waddr}

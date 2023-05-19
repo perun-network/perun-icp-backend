@@ -108,11 +108,16 @@ func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Addre
 		allocInts[i] = int(balance.Int64())
 	}
 
-	formatedRequestConcludeArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+	formatedRequestConcludeArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:])  //finalized
+	formatedRequestConcludeAGArgs := utils.FormatConcludeAGArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}
+
+	fmt.Println("formatedRequestConcludeArgs", formatedRequestConcludeArgs)
+	fmt.Println("formatedRequestConcludeAGArgs", formatedRequestConcludeAGArgs)
 
 	canID := a.conn.PerunID
 	canIDString := canID.String()

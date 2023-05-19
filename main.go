@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"perun.network/go-perun/wire"
 	"perun.network/perun-icp-backend/client"
 	"perun.network/perun-icp-backend/wallet"
@@ -20,23 +18,38 @@ const (
 )
 
 func main() {
-	fmt.Println("Hello World")
 
 	perunWlt := wallet.NewWallet()
-	acc := perunWlt.NewAccount()
-
-	fmt.Println("perunWlt: ", acc)
+	_ = perunWlt.NewAccount()
 
 	clientAConfig, err := client.NewUserConfig(userAbalance, "usera", Host, Port)
 	if err != nil {
 		panic(err)
 	}
-
+	clientBConfig, err := client.NewUserConfig(userAbalance, "userb", Host, Port)
+	if err != nil {
+		panic(err)
+	}
 	_, err = client.NewPerunUser(clientAConfig, ledgerPrincipal)
 	if err != nil {
 		panic(err)
 	}
 
-	_ = wire.NewLocalBus()
+	_, err = client.NewPerunUser(clientBConfig, ledgerPrincipal)
+	if err != nil {
+		panic(err)
+	}
+
+	bus := wire.NewLocalBus()
+
+	_, err = client.SetupPaymentClient(bus, perunWlt, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/usera_identity.pem", "./")
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = client.SetupPaymentClient(bus, perunWlt, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/userb_identity.pem", "./")
+	if err != nil {
+		panic(err)
+	}
 
 }

@@ -21,8 +21,8 @@ var addrEncoding = base64.NewEncoding(
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$",
 ).WithPadding(base64.NoPadding)
 
-func (a Address) MarshalBinary() ([]byte, error) {
-	return a[:], nil
+func (a *Address) MarshalBinary() ([]byte, error) {
+	return (*a)[:], nil
 }
 
 func (a *Address) UnmarshalBinary(data []byte) error {
@@ -35,20 +35,20 @@ func (a *Address) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (a Address) String() string {
-	return addrEncoding.EncodeToString(a[:])
+func (a *Address) String() string {
+	return addrEncoding.EncodeToString((*a)[:])
 }
 
-func (a Address) Equal(b wallet.Address) bool {
+func (a *Address) Equal(b wallet.Address) bool {
 	b_, ok := b.(*Address)
 	if !ok {
 		return false
 	}
-	return bytes.Equal(a[:], (*b_)[:])
+	return bytes.Equal((*a)[:], (*b_)[:])
 }
 
-func (a Address) Cmp(b wallet.Address) int {
-	return bytes.Compare(a[:], (*b.(*Address))[:])
+func (a *Address) Cmp(b wallet.Address) int {
+	return bytes.Compare((*a)[:], (*b.(*Address))[:])
 }
 
 func AsAddr(acc wallet.Address) *Address {
