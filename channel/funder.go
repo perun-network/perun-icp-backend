@@ -44,11 +44,13 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 	if err != nil {
 		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
 	}
+	time.Sleep(10 * time.Second)
 
 	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
+	time.Sleep(10 * time.Second)
 
 	addr := req.Account.ICPAddress()
 	memo, err := req.Funding.Memo()
@@ -116,6 +118,7 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	if err != nil {
 		return err
 	}
+
 	if err := NewDepositor(f.conn).Deposit(ctx, wReq); err != nil {
 		return err
 	}

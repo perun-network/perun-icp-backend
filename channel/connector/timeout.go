@@ -6,7 +6,6 @@ import (
 	"context"
 	"time"
 
-	//"github.com/centrifuge/go-substrate-rpc-client/v3/types"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 )

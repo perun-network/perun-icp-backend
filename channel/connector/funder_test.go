@@ -25,7 +25,7 @@ import (
 func TestLedgerAgent(t *testing.T) {
 	ledgerTestConfig := setup.DfxConfig{
 		Host:        "http://127.0.0.1",
-		Port:        8000,
+		Port:        4943,
 		ExecPath:    "./../../test/testdata/",
 		AccountPath: "./test/testdata/identities/minter_identity.pem",
 	}
@@ -37,7 +37,7 @@ func TestLedgerAgent(t *testing.T) {
 		t.Fatalf("Failed to decode principal: %v", err)
 	}
 
-	url, err := url.Parse("http://127.0.0.1:8000")
+	url, err := url.Parse("http://127.0.0.1:4943")
 	if err != nil {
 		t.Fatalf("Failed to parse URL: %v", err)
 	}

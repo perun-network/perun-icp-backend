@@ -14,7 +14,7 @@ func TestDFXEnvironment(t *testing.T) {
 	// Define a test config
 	testConfig := setup.DfxConfig{
 		Host:        "http://127.0.0.1",
-		Port:        8000,
+		Port:        4943,
 		ExecPath:    "./../test/testdata/",
 		AccountPath: filepath.Join(utils.SetHomeDir(), ".config", "dfx", "identity", "minter", "identity.pem"),
 	}

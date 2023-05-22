@@ -63,7 +63,7 @@ func (d *Dfx) checkDFXInstallation() error {
 }
 
 func (d *Dfx) startDFX(path, execPath string) (*exec.Cmd, error) {
-	dfx := exec.Command(path, "start", "--background", "--clean")
+	dfx := exec.Command(path, "start", "--background", "--clean", "--host", "127.0.0.1:4943")
 	dfx.Dir = execPath
 
 	err := dfx.Start()

@@ -2,10 +2,13 @@ package connector
 
 import (
 	"fmt"
+	//"time"
+
 	"github.com/aviate-labs/agent-go/candid"
 	"github.com/aviate-labs/agent-go/principal"
 
 	"os/exec"
+
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/utils"
@@ -66,7 +69,7 @@ func Withdraw(funding Funding, signature pwallet.Sig, canID principal.Principal,
 	output, err := execCanisterCommand(path, canIDString, "withdraw", formatedRequestWithdrawalArgs, execPath)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to deposit amount identified by a memo: %w", err)
+		return "", fmt.Errorf("failed to withdraw funds: %w", err)
 	}
 
 	return string(output), nil
@@ -427,21 +430,6 @@ func (c *Connector) VerifySig(nonce Nonce, parts []pwallet.Address, chDur uint64
 	return output, nil
 }
 
-// req.Account, req.Balance, req.FundingID
-//
-//	type ConcludeRequest = record {
-//		nonce : Nonce;
-//		participants : vec L2Account;
-//		challenge_duration : Duration;
-//		channel : ChannelId;
-//		version : nat64;
-//		allocation : vec Amount;
-//		finalized : bool;
-//		sigs : vec Signature;
-//	};
-//
-
-// func (c *Connector) BuildDispute(acc wallet.Account, _amount, _fee pchannel.Bal, funding Funding) (TxArgs, error) {
 func (c *Connector) BuildDispute(acc pwallet.Account, params *pchannel.Params, state *pchannel.State, sigs []pwallet.Sig) (string, error) {
 
 	parts := params.Parts
@@ -459,7 +447,7 @@ func (c *Connector) BuildDispute(acc pwallet.Account, params *pchannel.Params, s
 
 	allocInts := make([]int, len(alloc.Balances[0]))
 	for i, balance := range alloc.Balances[0] {
-		allocInts[i] = int(balance.Int64()) // Convert *big.Int to int64 and then to int
+		allocInts[i] = int(balance.Int64())
 	}
 
 	pid := params.ID()
@@ -469,23 +457,10 @@ func (c *Connector) BuildDispute(acc pwallet.Account, params *pchannel.Params, s
 	}
 
 	formatedRequestWithdrawalArgs := utils.FormatConcludeCLIArgs(nonceHash[:], addrs, params.ChallengeDuration, pid[:], state.Version, allocInts, true, sigs[:]) //finalized
-	// path, err := exec.LookPath("dfx")
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
-	// }
-
-	// canIDString := canID.Encode()
-
-	// output, err := execCanisterCommand(path, canIDString, "dispute", formatedRequestWithdrawalArgs, execPath)
-
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed conclude the channel: %w", err)
-	// }
 
 	return formatedRequestWithdrawalArgs, nil
 }
 
-// req.Account, req.Balance, req.FundingID
 func (c *Connector) BuildDeposit(acc wallet.Account, _amount, _fee pchannel.Bal, funding Funding) (TxArgs, error) {
 
 	amount, err := MakeBalance(_amount)
@@ -547,7 +522,11 @@ func depositFundMemPerunCLI(depositArgs DepositArgs, canID principal.Principal, 
 	}
 	channelIdSlice := []byte(depositArgs.ChannelId[:])
 
+	fmt.Println("DepositArgs: ", depositArgs)
+
 	formatedQueryFundingMemoArgs := utils.FormatFundingMemoArgs(addr, channelIdSlice, depositArgs.Memo)
+
+	fmt.Println("formatedQueryFundingMemoArgs: ", formatedQueryFundingMemoArgs)
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {

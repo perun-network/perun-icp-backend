@@ -26,25 +26,11 @@ import (
 	icwire "perun.network/perun-icp-backend/wire"
 )
 
-// type UserClient struct {
-// 	Agent     *agent.Agent
-// 	L2Account wallet.Account
-// 	Ledger    *ledger.Agent
-// }
-
 type PerunUser struct {
 	L2Account wallet.Account
 	Agent     *agent.Agent
 	Ledger    *ledger.Agent
 }
-
-// func (u UserClient) NewLedger() (ledger.Agent, error) {
-// 	ledgerAgent, err := ledger.NewAgent(u.Agent, u.L2Account)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return ledgerAgent, nil
-// }
 
 // PaymentClient is a payment channel client.
 type PaymentClient struct {
@@ -109,7 +95,6 @@ func NewPerunUser(config setup.UserConfig, ledgerAddr string) (*PerunUser, error
 	perunUser := &PerunUser{
 		Agent: agent,
 	}
-	//agentLedger, err := MakeLedger(config.Host, config.AccountPath, prLedger)
 
 	perunUser.Ledger, err = MakeLedger(config.AccountPath, config.Host, ledgerPrincipal)
 	if err != nil {
@@ -123,23 +108,6 @@ func NewPerunUser(config setup.UserConfig, ledgerAddr string) (*PerunUser, error
 
 	return perunUser, nil
 }
-
-// func NewDfxUser(config setup.DfxConfig, prLedger principal.Principal) (*PerunUser, error) {
-// 	agent, err := chanconn.NewAgent(config)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	perunUser := &PerunUser{
-// 		Agent: agent,
-// 	}
-
-// 	perunUser.L2Account, err = perunUser.NewL2Account()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return perunUser, nil
-// }
 
 func NewUserAgent(config setup.UserConfig) (*agent.Agent, error) {
 	data, err := os.ReadFile(config.AccountPath)
@@ -155,12 +123,6 @@ func NewUserAgent(config setup.UserConfig) (*agent.Agent, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// agent := agent.New(agent.AgentConfig{
-	// 	Identity: &agentID,
-	// 	ClientConfig: &agent.ClientConfig{
-	// 		Host: ic0,
-	// 	}})
 
 	agent := agent.New(agent.Config{
 		Identity: agentID,
@@ -229,11 +191,3 @@ func (c *PaymentClient) WireAddress() *icwire.Address {
 	waddr := icwallet.AsAddr(c.account)
 	return &icwire.Address{Address: waddr}
 }
-
-// // WalletAddress returns the wallet address of the client.
-// func (c *PaymentClient) WalletAddress() wallet.Address {
-// 	return wallet.Address(*c.account.(*icwallet.Address))
-// }
-
-// waddr := *icwallet.AsAddr(acc.Address())
-// wireaddr := icwire.Address{Address: &waddr}

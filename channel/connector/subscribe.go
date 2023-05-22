@@ -79,12 +79,7 @@ func (c *Connector) Subscribe(f EventPredicate) (*EventSub, error) {
 func (s *AdjudicatorSub) makePerunEvent(event PerunEvent) (pchannel.AdjudicatorEvent, error) {
 	switch event := event.(type) {
 	case *DisputedEvent:
-		// s.Log().Trace("AdjudicatorSub creating DisputedEvent")
-		// dispute, err := s.pallet.QueryStateRegister(event.Cid, s.storage, 0)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		//seconds := uint64(time.Now().Unix())
+
 		duration := 10 * time.Second
 		seconds := uint64(duration.Seconds())
 		return &pchannel.RegisteredEvent{
@@ -97,37 +92,9 @@ func (s *AdjudicatorSub) makePerunEvent(event PerunEvent) (pchannel.AdjudicatorE
 			State: nil, // only needed for virtual channel support
 			Sigs:  nil, // only needed for virtual channel support
 		}, nil
-	// case *FundedEvent:
-	// 	s.Log().Trace("AdjudicatorSub creating FundedEvent")
-	// 	// dispute, err := s.pallet.QueryStateRegister(event.Cid, s.storage, 0)
-	// 	// if err != nil {
-	// 	// 	return nil, err
-	// 	// }
 
-	// 	// appPK, err := pkg_sr25519.NewPK(event.App[:])
-	// 	// if err != nil {
-	// 	// 	return nil, err
-	// 	// }
-	// 	// appAddr := sr25519.NewAddressFromPK(appPK)
-	// 	// app, err := pchannel.Resolve(appAddr)
-	// 	// if err != nil {
-	// 	// 	return nil, err
-	// 	// }
-
-	// 	return &pchannel.ProgressedEvent{
-	// 		AdjudicatorEventBase: pchannel.AdjudicatorEventBase{
-	// 			IDV:      event.Cid,
-	// 			VersionV: event.Version,
-	// 			TimeoutV: channel.MakeTimeout(dispute.Timeout, s.storage),
-	// 		},
-	// 		State: channel.NewPerunState(&dispute.State, app),
-	// 	}, nil
 	case *ConcludedEvent:
-		// s.Log().Trace("AdjudicatorSub creating ConcludedEvent")
-		// dispute := QueryStateCLI(event.Cid)
-		// if err != nil {
-		// 	return nil, err
-		// }
+
 		duration := 10 * time.Second
 		seconds := uint64(duration.Seconds())
 		return &pchannel.ConcludedEvent{

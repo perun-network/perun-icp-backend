@@ -51,7 +51,7 @@ func NewMinterSetup(t *testing.T) *Setup {
 
 	testConfig := setup.DfxConfig{
 		Host:        "http://127.0.0.1",
-		Port:        8000,
+		Port:        4943,
 		ExecPath:    "./../../test/testdata/", //"../test/testdata/",
 		AccountPath: filepath.Join(utils.SetHomeDir(), ".config", "dfx", "identity", "minter", "identity.pem"),
 	}
@@ -75,35 +75,6 @@ func NewMinterSetup(t *testing.T) *Setup {
 
 	return &Setup{t, pkgtest.Prng(t), accs, accs[0], accs[1], dfx, conns} //, chanConn}
 }
-
-// func NewConnector(config setup.DfxConfig) *chanconn.Connector {
-
-// 	newAgent, err := client.NewAgent(config)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	recipPerunID, err := utils.DecodePrincipal("r7inp-6aaaa-aaaaa-aaabq-cai")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	recipLedgerID, err := utils.DecodePrincipal("rrkah-fqaaa-aaaaa-aaaaq-cai")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	chanConn := &chanconn.Connector{
-// 		Agent:    newAgent,
-// 		Log:      log.MakeEmbedding(log.Default()),
-// 		Source:   chanconn.NewEventSource(),
-// 		PerunID:  recipPerunID,
-// 		LedgerID: recipLedgerID,
-// 		ExecPath: chanconn.ExecPath(config.ExecPath),
-// 	}
-
-// 	return chanConn
-// }
 
 type Setup struct {
 	T   *testing.T

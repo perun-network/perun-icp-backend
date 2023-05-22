@@ -150,7 +150,6 @@ func TestConcludeWithdraw(t *testing.T) {
 		panic(err)
 	}
 
-	// test withdrawal to usera with principal: exqrz-uemtb-qnd6t-mvbn7-mxjre-bodlr-jnqql-tnaxm-ur6uc-mmgb4-jqe
 	require.NoError(t, err)
 	outpWithdraw, err := chanconn.Withdraw(dReqFunding, sigs[0], *recipPerunID, execPathTyped)
 	fmt.Println("outp: ", outpWithdraw)

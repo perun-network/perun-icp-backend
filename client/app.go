@@ -19,21 +19,13 @@ import (
 func SetupPaymentClient(
 	bus wire.Bus, // bus is used of off-chain communication.
 	w *wallet.FsWallet, // w is the wallet used to resolve addresses to accounts for channels.
-	//acc wallet.Account, // acc is the account to be used for signing transactions.
-	//nodeURL string, // nodeURL is the URL of the blockchain node.
 	perunID string,
 	ledgerID string,
 	host string, // networkId is the identifier of the blockchain.
 	port int,
 	accountPath string,
 	execPath string,
-	//queryDepth types.BlockNumber, // queryDepth is the number of blocks being evaluated when looking for events.
 ) (*PaymentClient, error) {
-	// Connect to backend.
-	// api, err := dot.NewAPI(nodeURL, networkId)
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	acc := w.NewAccount()
 
@@ -67,24 +59,3 @@ func SetupPaymentClient(
 	go perunClient.Handle(c, c)
 	return c, nil
 }
-
-// func SetupPaymentClient(
-// 	bus wire.Bus,
-// 	nodeURL string,
-// 	//networkId dot.NetworkID,
-// 	//queryDepth types.BlockNumber,
-// 	perunAcc wallet.Account,
-// ) (*PaymentClient, error) {
-// 	// Create wallet and account.
-
-// 	// Create and start client.
-// 	c, err := client.SetupPaymentClient(
-// 		bus,
-// 		perunAcc,
-// 	)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	return c
-// }

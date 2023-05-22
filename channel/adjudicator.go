@@ -108,16 +108,13 @@ func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Addre
 		allocInts[i] = int(balance.Int64())
 	}
 
-	formatedRequestConcludeArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:])  //finalized
-	formatedRequestConcludeAGArgs := utils.FormatConcludeAGArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+	formatedRequestConcludeArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+	//formatedRequestConcludeAGArgs := utils.FormatConcludeAGArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}
-
-	fmt.Println("formatedRequestConcludeArgs", formatedRequestConcludeArgs)
-	fmt.Println("formatedRequestConcludeAGArgs", formatedRequestConcludeAGArgs)
 
 	canID := a.conn.PerunID
 	canIDString := canID.String()
@@ -191,7 +188,6 @@ func (a *Adjudicator) Progress(ctx context.Context, req pchannel.ProgressReq) er
 	return nil
 }
 
-// "context".Context, "perun.network/go-perun/channel".AdjudicatorReq, "perun.network/go-perun/channel".StateMap
 func (a *Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq, smap pchannel.StateMap) error {
 	pid := req.Params.ID()
 	pidSlice := pid[:]
@@ -205,8 +201,6 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq,
 	formatedRequestWithdrawalArgs := utils.FormatWithdrawalArgs(addrSlice, pidSlice, sig)
 
 	canIDString := a.conn.PerunID.Encode()
-
-	//output, err := execCanisterCommand(path, canIDString, "withdraw", formatedRequestWithdrawalArgs, execPath)
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {
@@ -224,7 +218,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq,
 	fmt.Println("output", output)
 
 	if err != nil {
-		return fmt.Errorf("failed to deposit amount identified by a memo: %w", err)
+		return fmt.Errorf("failed to withdraw funds: %w", err)
 	}
 
 	return nil
@@ -244,8 +238,7 @@ func (a *Adjudicator) dispute(ctx context.Context, req pchannel.AdjudicatorReq) 
 	if err != nil {
 		return err
 	}
-	//a.Log.Log().WithField("cid", req.Tx.ID).WithField("version", req.Tx.Version).Debug("Dispute")
-	// Send and wait for TX finalization.
+
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return fmt.Errorf("failed to find 'dfx' executable: %w", err)

@@ -50,7 +50,7 @@ func FormatWithUnderscores(n uint64) string {
 }
 
 func FormatFundingArgs(addr, chanId []byte) string {
-	return fmt.Sprintf("( record { channel = blob\"%s\"; participant = %s } )", FormatHexByte(chanId), FormatVec(addr))
+	return fmt.Sprintf("( record { channel = blob \"%s\"; participant = %s } )", FormatHexByte(chanId), FormatVec(addr))
 }
 func FormatFidArgs(addr, chanId []byte) string {
 	return fmt.Sprintf("(record {channel = %s; participant = %s})", FormatVec(chanId), FormatVec(addr))
@@ -85,7 +85,7 @@ func FormatFundingMemoArgs(addr, chanId []byte, memo uint64) string {
 	var builder strings.Builder
 
 	builder.WriteString(fmt.Sprintf(
-		"(record {channel = blob\"%s\"; participant = %s; memo = %d : nat64 })",
+		"(record {channel = blob \"%s\"; participant = %s; memo = %d : nat64 })",
 		FormatHexByte(chanId),
 		FormatVec(addr),
 		memo,

@@ -128,15 +128,6 @@ func EventIsConcluded(cid ChannelID) func(PerunEvent) bool {
 	}
 }
 
-// // EventIsProgressed checks whether an event is a ProgressedEvent for a
-// // specific channel.
-// func EventIsProgressed(cid ChannelID) func(PerunEvent) bool {
-// 	return func(e PerunEvent) bool {
-// 		event, ok := e.(*ProgressedEvent)
-// 		return ok && event.Cid == cid
-// 	}
-// }
-
 func NewEventSub() *EventSub {
 	return &EventSub{
 		Closer:    new(pkgsync.Closer),

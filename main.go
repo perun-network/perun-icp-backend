@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"perun.network/go-perun/wire"
 	"perun.network/perun-icp-backend/client"
 	"perun.network/perun-icp-backend/wallet"
@@ -10,8 +8,8 @@ import (
 
 const (
 	Host            = "http://127.0.0.1"
-	Port            = 8000
-	ledgerHost      = "http://127.0.0.1:8000"
+	Port            = 4943
+	ledgerHost      = "http://127.0.0.1:4943"
 	perunPrincipal  = "r7inp-6aaaa-aaaaa-aaabq-cai"
 	ledgerPrincipal = "rrkah-fqaaa-aaaaa-aaaaq-cai"
 	userA           = "97520b79b03e38d3f6b38ce5026a813ccc9d1a3e830edb6df5970e6ca6ad84be"
@@ -40,32 +38,26 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	userA, err := client.NewPerunUser(clientAConfig, ledgerPrincipal)
+	_, err = client.NewPerunUser(clientAConfig, ledgerPrincipal)
 	if err != nil {
 		panic(err)
 	}
 
-	userB, err := client.NewPerunUser(clientBConfig, ledgerPrincipal)
+	_, err = client.NewPerunUser(clientBConfig, ledgerPrincipal)
 	if err != nil {
 		panic(err)
 	}
 
 	bus := wire.NewLocalBus()
 
-	alice, err := client.SetupPaymentClient(bus, perunWlt, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/usera_identity.pem", "./")
+	_, err = client.SetupPaymentClient(bus, perunWlt, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/usera_identity.pem", "./")
 	if err != nil {
 		panic(err)
 	}
 
-	bob, err := client.SetupPaymentClient(bus, perunWlt, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/userb_identity.pem", "./")
+	_, err = client.SetupPaymentClient(bus, perunWlt, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/userb_identity.pem", "./")
 	if err != nil {
 		panic(err)
 	}
 
-	alice.OpenChannel(bob.WireAddress(), 10)
-	fmt.Println(userA, bob, alice, userB)
-	err = replica.StopDFX()
-	if err != nil {
-		panic(err)
-	}
 }
