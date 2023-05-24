@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"math"
 	"math/rand"
-
 	"path/filepath"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	"perun.network/perun-icp-backend/channel"
 	"perun.network/perun-icp-backend/client"
+	"sync"
 
 	"perun.network/perun-icp-backend/setup"
 	"perun.network/perun-icp-backend/utils"
@@ -69,8 +69,13 @@ func NewMinterSetup(t *testing.T) *Setup {
 		t.Fatal("Error generating random account 2:", err)
 	}
 	accs := []wallet.Account{acc1, acc2}
+	newMutex := &sync.Mutex{}
 	conn1 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.ExecPath, testConfig.Host, testConfig.Port)
 	conn2 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.ExecPath, testConfig.Host, testConfig.Port)
+
+	conn1.Mutex = newMutex
+	conn2.Mutex = newMutex
+
 	conns := []*chanconn.Connector{conn1, conn2}
 
 	return &Setup{t, pkgtest.Prng(t), accs, accs[0], accs[1], dfx, conns} //, chanConn}

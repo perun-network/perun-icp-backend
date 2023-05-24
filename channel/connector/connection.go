@@ -10,10 +10,10 @@ import (
 	"github.com/aviate-labs/agent-go"
 	"github.com/aviate-labs/agent-go/identity"
 	"github.com/aviate-labs/agent-go/principal"
+	"math/big"
 	"net/url"
 	"os"
-
-	"math/big"
+	"sync"
 
 	"perun.network/go-perun/log"
 	utils "perun.network/perun-icp-backend/utils"
@@ -23,6 +23,7 @@ type Connector struct {
 	Log      log.Embedding
 	Agent    *agent.Agent
 	Source   *EventSource
+	Mutex    *sync.Mutex
 	PerunID  *principal.Principal
 	LedgerID *principal.Principal
 	ExecPath ExecPath

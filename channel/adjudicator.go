@@ -56,10 +56,6 @@ func (a *Adjudicator) Subscribe(ctx context.Context, cid pchannel.ID) (pchannel.
 	return chanconn.NewAdjudicatorSub(cid, c)
 }
 
-// func (a *Adjudicator) Subscribe(ctx context.Context, cid pchannel.ID) (pchannel.AdjudicatorSubscription, error) {
-// 	return NewAdjudicatorSub(cid, a.pallet, a.storage, a.pastBlocks)
-// }
-
 func (a *Adjudicator) Dispute(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig) (string, error) {
 
 	addrs := make([][]byte, len(parts))
@@ -109,7 +105,6 @@ func (a *Adjudicator) ConcludeDfxCLI(nonce chanconn.Nonce, parts []pwallet.Addre
 	}
 
 	formatedRequestConcludeArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
-	//formatedRequestConcludeAGArgs := utils.FormatConcludeAGArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {
@@ -144,8 +139,6 @@ func (a *Adjudicator) ConcludeAgentGo(nonce chanconn.Nonce, parts []pwallet.Addr
 	}
 
 	formatedRequestConcludeArgs := utils.FormatConcludeAGArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
-
-	fmt.Println("formatedRequestConcludeArgs", formatedRequestConcludeArgs)
 
 	encodedConcludeArgs, err := candid.EncodeValueString(formatedRequestConcludeArgs)
 	if err != nil {
@@ -213,9 +206,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq,
 
 	execPath := a.conn.ExecPath
 
-	output, err := chanconn.ExecCanisterCommand(path, canIDString, "withdraw", formatedRequestWithdrawalArgs, execPath)
-
-	fmt.Println("output", output)
+	_, err = chanconn.ExecCanisterCommand(path, canIDString, "withdraw", formatedRequestWithdrawalArgs, execPath)
 
 	if err != nil {
 		return fmt.Errorf("failed to withdraw funds: %w", err)
@@ -247,13 +238,11 @@ func (a *Adjudicator) dispute(ctx context.Context, req pchannel.AdjudicatorReq) 
 	canID := a.conn.PerunID
 	canIDString := canID.String()
 	execPath := a.conn.ExecPath
-	output, err := chanconn.ExecCanisterCommand(path, canIDString, "dispute", disputeArgs, execPath)
+	_, err = chanconn.ExecCanisterCommand(path, canIDString, "dispute", disputeArgs, execPath)
 
 	if err != nil {
 		return fmt.Errorf("failed a dispute call: %w", err)
 	}
-
-	fmt.Println("output", output)
 
 	// Wait for disputed event.
 	return nil //a.waitForDispute(ctx, sub, req.Tx.Version)

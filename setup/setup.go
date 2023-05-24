@@ -110,6 +110,7 @@ func DeployCanisters(path, execPath string) error {
 	}
 
 	fmt.Println("Deployed Canisters.")
+
 	return nil
 }
 
@@ -128,7 +129,7 @@ func createLedgerArg() string {
 }
 
 func deployLedger(path, execPath, ledgerArg string) error {
-	fmt.Println("ledgerArg: ", ledgerArg)
+	fmt.Println("Deploying the Ledger with the following parameters: ", ledgerArg)
 	deployLedger := exec.Command(path, "deploy", "ledger", "--argument", ledgerArg)
 	deployLedger.Dir = execPath
 
@@ -138,7 +139,6 @@ func deployLedger(path, execPath, ledgerArg string) error {
 		return fmt.Errorf("error deploying ledger: %w", err)
 	}
 
-	fmt.Println(string(outputLedger))
 	return nil
 }
 
@@ -146,12 +146,11 @@ func deployPerun(path, execPath string) error {
 	deployPerun := exec.Command(path, "deploy", "icp_perun")
 	deployPerun.Dir = execPath
 
-	outputPerun, err := deployPerun.CombinedOutput()
+	_, err := deployPerun.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error deploying icp_perun: %w", err)
 	}
 
-	fmt.Println(string(outputPerun))
 	return nil
 }
 

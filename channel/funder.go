@@ -47,6 +47,7 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 	}
 
 	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
+
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
@@ -57,12 +58,10 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 		return fmt.Errorf("failed to get memo from funding: %w", err)
 	}
 
-	depositResult, err := d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *d.cnr.PerunID, d.cnr.ExecPath)
+	_, err = d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *d.cnr.PerunID, d.cnr.ExecPath)
 	if err != nil {
 		return fmt.Errorf("failed to deposit to perun channel: %w", err)
 	}
-
-	fmt.Println("depositResult: ", depositResult)
 
 	return nil
 }
@@ -100,7 +99,6 @@ func (f *Funder) FundAG(ctx context.Context, req pchannel.FundingReq) error {
 	go func() {
 		for _, event := range eventList {
 			evli <- event
-			fmt.Println("Event registered: ", event)
 		}
 	}()
 
@@ -114,21 +112,28 @@ type FunderWithMutex struct {
 
 func (fm *FunderWithMutex) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	fm.Mutex.Lock()
-	fmt.Println("This is locked")
 
 	defer fm.Mutex.Unlock()
 
 	return fm.Funder.Fund(ctx, req)
 }
 func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
+	f.conn.Mutex.Lock()
+
+	defer f.conn.Mutex.Unlock()
+
+	return fundLocked(ctx, req, f.acc, f.conn)
+}
+
+func fundLocked(ctx context.Context, req pchannel.FundingReq, acc pwallet.Account, conn *chanconn.Connector) error {
 	tstamp := time.Now().UnixNano()
 
-	wReq, err := NewDepositReqFromPerun(&req, f.acc)
+	wReq, err := NewDepositReqFromPerun(&req, acc)
 	if err != nil {
 		return err
 	}
 
-	if err := NewDepositor(f.conn).Deposit(ctx, wReq); err != nil {
+	if err := NewDepositor(conn).Deposit(ctx, wReq); err != nil {
 		return err
 	}
 
@@ -136,7 +141,7 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 
 	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
 
-	eventsString, err := f.conn.QueryEventsCLI(qEventsvArgs, *f.conn.PerunID, f.conn.ExecPath)
+	eventsString, err := conn.QueryEventsCLI(qEventsvArgs, *conn.PerunID, conn.ExecPath)
 	if err != nil {
 		return fmt.Errorf("Error for parsing channel events: %v", err)
 	}
@@ -156,18 +161,15 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 
 		for _, event := range eventList {
 			evli <- event
-			fmt.Println("Event registered: ", event)
 		}
 	}()
 
 	// Wait for the NotifyTransferToPerun operation to complete.
 	wg.Wait()
-	fmt.Println("Done locking")
 	return nil
 }
 
 func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, req pchannel.FundingReq) error {
-	fmt.Println("Starting waitforFundings")
 	fundingEventCount := 0
 	for {
 		select {

@@ -34,16 +34,12 @@ func Conclude(nonce Nonce, parts []pwallet.Address, chDur uint64, chanId Channel
 		allocInts[i] = int(balance.Int64()) // Convert *big.Int to int64 and then to int
 	}
 
-	formatedRequestWithdrawalArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:])    //finalized
-	formatedRequestWithdrawalArgsTEST := utils.FormatConcludeAGArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
+	formatedRequestWithdrawalArgs := utils.FormatConcludeCLIArgs(nonce[:], addrs, chDur, chanId[:], vers, allocInts, true, sigs[:]) //finalized
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {
 		return "", fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}
-
-	fmt.Println("formatedRequestWithdrawalArgs: ", formatedRequestWithdrawalArgs)
-	fmt.Println("formatedRequestWithdrawalArgsTEST: ", formatedRequestWithdrawalArgsTEST)
 
 	canIDString := canID.Encode()
 
@@ -108,6 +104,10 @@ func (c *Connector) DepositToPerunChannel(addr wallet.Address, chanID ChannelID,
 	return channelAlloc, nil
 }
 
+func QueryHoldings(queryArgs DepositArgs, canID principal.Principal, execPath ExecPath) (string, error) {
+	return queryHoldingsCLI(queryArgs, canID, execPath)
+}
+
 func queryHoldingsCLI(queryArgs DepositArgs, canID principal.Principal, execPath ExecPath) (string, error) {
 	addr, err := queryArgs.Participant.MarshalBinary()
 	if err != nil {
@@ -128,7 +128,6 @@ func queryHoldingsCLI(queryArgs DepositArgs, canID principal.Principal, execPath
 		return "", fmt.Errorf("failed to query holdings: %w", err)
 	}
 
-	fmt.Printf("User holdings in the channel after the deposit: %s\n", output)
 	return output, nil
 }
 
@@ -205,10 +204,15 @@ func queryFundingCLI(queryFundingArgs DepositArgs, canID principal.Principal, ex
 
 	addr, err := queryFundingArgs.Participant.MarshalBinary()
 	if err != nil {
-		fmt.Println("Error: ", err)
+		return "", fmt.Errorf("Error: %v", err)
 	}
 
 	formatedQueryFundingArgs := utils.FormatFundingArgs(addr, queryFundingArgs.ChannelId[:])
+
+	_, err = candid.EncodeValueString(formatedQueryFundingArgs)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode query funding arguments: %w", err)
+	}
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {
@@ -291,15 +295,12 @@ func (c *Connector) TransferDfxAG(txArgs TxArgs, canID principal.Principal, exec
 	if err != nil {
 		return "", fmt.Errorf("failed to encode transfer arguments: %w", err)
 	}
-	fmt.Println("encodedTransferArgs for funding: ", encodedTransferArgs)
 	respNote, err := c.Agent.CallString(canID, "transfer", encodedTransferArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to call notify method: %w", err)
 	}
 
-	fmt.Println("formatedTransferArgs for funding: ", formatedTransferArgs)
-
-	fmt.Println("output from transfer: ", string(respNote))
+	fmt.Println("Output from transfer using AgentGo calls: ", string(respNote))
 
 	return string(respNote), nil
 }
@@ -307,7 +308,6 @@ func (c *Connector) TransferDfxAG(txArgs TxArgs, canID principal.Principal, exec
 func (c *Connector) TransferDfx(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
 	ToString := txArgs.To.String()
 	formatedTransferArgs := utils.FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, ToString)
-	fmt.Println("formatedTransferArgs for funding: ", formatedTransferArgs)
 	path, err := exec.LookPath("dfx")
 	canIDString := canID.Encode()
 	if err != nil {
@@ -320,7 +320,7 @@ func (c *Connector) TransferDfx(txArgs TxArgs, canID principal.Principal, execPa
 	if err != nil {
 		return "", fmt.Errorf("dfx transfer command failed: %v\nOutput: %s", err, output)
 	}
-	fmt.Println("output from transfer: ", string(output))
+	fmt.Println("Transfer to the Perun Ledger: ", string(output))
 
 	return string(output), nil
 }
@@ -465,20 +465,17 @@ func (c *Connector) BuildDeposit(acc wallet.Account, _amount, _fee pchannel.Bal,
 
 	amount, err := MakeBalance(_amount)
 	if err != nil {
-		fmt.Println("Error m akebalanceamount: ", err)
 
 		return TxArgs{}, err
 	}
 	fee, err := MakeBalance(_fee)
 	if err != nil {
-		fmt.Println("Error m akebalancefee: ", err)
 		return TxArgs{}, err
 	}
 
 	memo, err := funding.Memo()
 
 	if err != nil {
-		fmt.Println("Error m memo: ", err)
 
 		return TxArgs{}, err
 	}
@@ -497,7 +494,6 @@ func (c *Connector) BuildDeposit(acc wallet.Account, _amount, _fee pchannel.Bal,
 func (c *Connector) QueryMemo(memoArg uint64, queryAt principal.Principal) (string, error) {
 
 	memoString := fmt.Sprintf("(%d : nat64)", memoArg)
-	fmt.Println("memoString: ", memoString)
 	encodedQueryMemoArgs, err := candid.EncodeValueString(memoString)
 
 	if err != nil {
@@ -509,7 +505,6 @@ func (c *Connector) QueryMemo(memoArg uint64, queryAt principal.Principal) (stri
 		return "", fmt.Errorf("failed to call query memo method: %w", err)
 	}
 
-	fmt.Println("Sent query for memo to Perun canister with response: ", respQuery)
 	return respQuery, nil
 
 }
@@ -522,11 +517,7 @@ func depositFundMemPerunCLI(depositArgs DepositArgs, canID principal.Principal, 
 	}
 	channelIdSlice := []byte(depositArgs.ChannelId[:])
 
-	fmt.Println("DepositArgs: ", depositArgs)
-
 	formatedQueryFundingMemoArgs := utils.FormatFundingMemoArgs(addr, channelIdSlice, depositArgs.Memo)
-
-	fmt.Println("formatedQueryFundingMemoArgs: ", formatedQueryFundingMemoArgs)
 
 	path, err := exec.LookPath("dfx")
 	if err != nil {
@@ -535,12 +526,10 @@ func depositFundMemPerunCLI(depositArgs DepositArgs, canID principal.Principal, 
 
 	canIDString := canID.Encode()
 
-	output, err := execCanisterCommand(path, canIDString, "deposit_memo", formatedQueryFundingMemoArgs, execPath)
+	_, err = execCanisterCommand(path, canIDString, "deposit_memo", formatedQueryFundingMemoArgs, execPath)
 	if err != nil {
 		return fmt.Errorf("failed to deposit amount identified by a memo: %w", err)
 	}
-
-	fmt.Println("Deposited amount: ", string(output))
 
 	return nil
 }

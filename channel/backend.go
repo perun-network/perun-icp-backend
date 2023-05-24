@@ -7,7 +7,6 @@ import (
 
 	"fmt"
 	"github.com/aviate-labs/agent-go/candid"
-	"log"
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
@@ -27,7 +26,7 @@ func (b *backend) CalcID(params *pchannel.Params) (id pchannel.ID) {
 	id, err := CalcID(params)
 	if err != nil {
 		// Log the error
-		log.Printf("Error calculating channel ID: %v", err)
+		//fmt.Printf("Error calculating channel ID: %v", err)
 		return pchannel.ID{}
 	}
 	return id

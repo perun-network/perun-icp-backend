@@ -14,7 +14,6 @@ import (
 func FundAll(ctx context.Context, funders []*channel.Funder, reqs []*pchannel.FundingReq) error {
 
 	for i := range funders {
-		fmt.Println("ctx, *reqs[i], funders[i]: ", ctx, reqs[i], funders[i])
 
 		err := funders[i].Fund(ctx, *reqs[i])
 		if err != nil {
@@ -66,7 +65,6 @@ func FundConc(ctx context.Context, funders []*channel.Funder, reqs []*pchannel.F
 	}
 
 	if g.WaitDoneOrFailedCtx(ctx) {
-		fmt.Println("Funding done")
 		return ctx.Err()
 	}
 	return g.Err()

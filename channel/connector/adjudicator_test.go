@@ -60,7 +60,7 @@ func TestConcludeDfxCLI(t *testing.T) {
 
 	assert.Equal(t, "(opt \"successful concluding the channel\")\n", outpConclude)
 
-	fmt.Println("Concluded channel via DFX CLI: ", outpConclude)
+	log.Printf("Concluded channel via DFX CLI: %s", outpConclude)
 
 	err = s.Setup.DfxSetup.StopDFX()
 	assert.NoError(t, err, "Failed to stop DFX environment")
@@ -141,7 +141,7 @@ func TestConcludeWithdraw(t *testing.T) {
 	}
 
 	assert.Equal(t, "(opt \"successful concluding the channel\")\n", outpConclude)
-	fmt.Println("outp: ", outpConclude)
+	log.Printf("Conclusion of channel: %s", outpConclude)
 
 	execPathTyped := chanconn.NewExecPath("./../../test/testdata/")
 
@@ -152,10 +152,8 @@ func TestConcludeWithdraw(t *testing.T) {
 
 	require.NoError(t, err)
 	outpWithdraw, err := chanconn.Withdraw(dReqFunding, sigs[0], *recipPerunID, execPathTyped)
-	fmt.Println("outp: ", outpWithdraw)
+	log.Printf("Withdrawal from channel: %s", outpWithdraw)
 	require.NoError(t, err)
-	// Check the on-chain balance.
-	//s.AssertDeposits(dSetup.FIDs, dSetup.FinalBals)
 
 	err = s.Setup.DfxSetup.StopDFX()
 	assert.NoError(t, err, "Failed to stop DFX environment")
@@ -198,7 +196,7 @@ func TestDispute(t *testing.T) {
 		log.Fatalf("Failed to dispute: %v", err)
 	}
 	assert.Equal(t, "(opt \"successful initialization of a dispute\")\n", outpDispute)
-	fmt.Println("outp: ", outpDispute)
+	t.Logf("Dispute response: %s", outpDispute)
 
 	err = s.Setup.DfxSetup.StopDFX()
 	assert.NoError(t, err, "Failed to stop DFX environment")
