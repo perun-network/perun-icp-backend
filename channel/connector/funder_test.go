@@ -2,10 +2,11 @@
 package connector_test
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"log"
 	"net/url"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aviate-labs/agent-go/identity"
 
@@ -105,7 +106,7 @@ func TestDepositCLI(t *testing.T) {
 	params, state := s.NewRandomParamAndState()
 	dSetup := chtest.NewDepositSetup(params, state)
 
-	err = chtest.FundAll(s.NewCtx(), s.Funders, dSetup.FReqs)
+	err = chtest.FundMtx(s.NewCtx(), s.Funders, dSetup.FReqs)
 	require.NoError(t, err)
 }
 

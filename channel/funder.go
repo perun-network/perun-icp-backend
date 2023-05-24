@@ -13,6 +13,7 @@ import (
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	utils "perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
+	"sync"
 
 	"time"
 )
@@ -44,13 +45,11 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 	if err != nil {
 		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
 	}
-	time.Sleep(10 * time.Second)
 
 	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
-	time.Sleep(10 * time.Second)
 
 	addr := req.Account.ICPAddress()
 	memo, err := req.Funding.Memo()
@@ -108,13 +107,23 @@ func (f *Funder) FundAG(ctx context.Context, req pchannel.FundingReq) error {
 	return nil
 }
 
-func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
+type FunderWithMutex struct {
+	Funder *Funder
+	Mutex  *sync.Mutex
+}
 
-	// timestamp the funding procedure
+func (fm *FunderWithMutex) Fund(ctx context.Context, req pchannel.FundingReq) error {
+	fm.Mutex.Lock()
+	fmt.Println("This is locked")
+
+	defer fm.Mutex.Unlock()
+
+	return fm.Funder.Fund(ctx, req)
+}
+func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	tstamp := time.Now().UnixNano()
 
 	wReq, err := NewDepositReqFromPerun(&req, f.acc)
-
 	if err != nil {
 		return err
 	}
@@ -139,13 +148,21 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 
 	evli := make(chan chanconn.Event, 1)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
+
 		for _, event := range eventList {
 			evli <- event
 			fmt.Println("Event registered: ", event)
 		}
 	}()
 
+	// Wait for the NotifyTransferToPerun operation to complete.
+	wg.Wait()
+	fmt.Println("Done locking")
 	return nil
 }
 
