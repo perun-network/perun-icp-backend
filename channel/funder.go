@@ -36,6 +36,7 @@ func (f *Funder) GetAcc() *wallet.Account {
 }
 
 func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
+
 	depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
 	if err != nil {
 		return fmt.Errorf("failed to build deposit: %w", err)
@@ -117,10 +118,8 @@ func (fm *FunderWithMutex) Fund(ctx context.Context, req pchannel.FundingReq) er
 
 	return fm.Funder.Fund(ctx, req)
 }
-func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
-	f.conn.Mutex.Lock()
 
-	defer f.conn.Mutex.Unlock()
+func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 
 	return fundLocked(ctx, req, f.acc, f.conn)
 }

@@ -26,6 +26,7 @@ func SetupPaymentClient(
 	port int,
 	accountPath string,
 	execPath string,
+	//perun *chanconn.Connector,
 ) (*PaymentClient, error) {
 
 	acc := w.NewAccount()
@@ -33,6 +34,7 @@ func SetupPaymentClient(
 	// Connect to Perun pallet and get funder + adjudicator from it.
 	perun := chanconn.NewConnector(perunID, ledgerID, accountPath, execPath, host, port)
 	perun.Mutex = mtx
+	fmt.Println("perun.Mutex: ", perun.Mutex, &perun.Mutex)
 
 	funder := icchannel.NewFunder(acc, perun)
 	adj := icchannel.NewAdjudicator(acc, perun)
@@ -46,6 +48,7 @@ func SetupPaymentClient(
 	// Setup Perun client.
 	waddr := icwallet.AsAddr(acc.Address())
 	wireaddr := &icwire.Address{Address: waddr}
+
 	perunClient, err := client.New(wireaddr, bus, funder, adj, w, watcher)
 	if err != nil {
 		return nil, errors.WithMessage(err, "creating client")

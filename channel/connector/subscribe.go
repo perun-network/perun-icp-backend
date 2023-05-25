@@ -16,8 +16,7 @@ type AdjudicatorSub struct {
 	cid  ChannelID
 	sub  *EventSub
 	conn *Connector
-	//storage substrate.StorageQueryer
-	err chan error
+	err  chan error
 }
 
 // NewAdjudicatorSub returns a new AdjudicatorSub. Will return all events from
@@ -29,12 +28,6 @@ func NewAdjudicatorSub(cid ChannelID, conn *Connector) (*AdjudicatorSub, error) 
 	}
 
 	ret := &AdjudicatorSub{new(pkgsync.Closer), log.MakeEmbedding(log.Default()), cid, sub, conn, make(chan error, 1)}
-	// ret.OnCloseAlways(func() {
-	// 	if err := ret.sub.Close(); err != nil {
-	// 		ret.Log().WithError(err).Error("Could not close Closer.")
-	// 	}
-	// 	close(ret.err)
-	// })
 	return ret, nil
 }
 

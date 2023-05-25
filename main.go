@@ -4,6 +4,7 @@ import (
 	"perun.network/go-perun/wire"
 	"perun.network/perun-icp-backend/client"
 	"perun.network/perun-icp-backend/wallet"
+
 	"sync"
 )
 
@@ -53,6 +54,8 @@ func main() {
 
 	mtx := &sync.Mutex{}
 
+	// perun := chanconn.NewConnector(perunPrincipal, ledgerPrincipal, "./test/testdata/identities/usera_identity.pem", "./", Host, Port)
+	// perun.Mutex = mtx
 	_, err = client.SetupPaymentClient(bus, perunWlt, mtx, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/usera_identity.pem", "./")
 	if err != nil {
 		panic(err)

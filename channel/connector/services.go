@@ -81,11 +81,12 @@ func (c *Connector) DepositToPerunChannel(addr wallet.Address, chanID ChannelID,
 		Participant: addr,
 		Memo:        memoFunding,
 	}
-
+	c.Mutex.Lock()
 	_, err := queryFundingCLI(depositArgs, perunID, execPath)
 	if err != nil {
 		return 0, fmt.Errorf("error querying funding: %v", err)
 	}
+	c.Mutex.Unlock()
 
 	if err := depositFundMemPerunCLI(depositArgs, perunID, execPath); err != nil {
 		return 0, fmt.Errorf("error depositing: %v", err)
@@ -208,7 +209,6 @@ func queryFundingCLI(queryFundingArgs DepositArgs, canID principal.Principal, ex
 	}
 
 	formatedQueryFundingArgs := utils.FormatFundingArgs(addr, queryFundingArgs.ChannelId[:])
-
 	_, err = candid.EncodeValueString(formatedQueryFundingArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to encode query funding arguments: %w", err)
@@ -300,7 +300,7 @@ func (c *Connector) TransferDfxAG(txArgs TxArgs, canID principal.Principal, exec
 		return "", fmt.Errorf("failed to call notify method: %w", err)
 	}
 
-	fmt.Println("Output from transfer using AgentGo calls: ", string(respNote))
+	fmt.Println("Output from transfer using Agent Go calls: ", string(respNote))
 
 	return string(respNote), nil
 }
@@ -328,6 +328,8 @@ func (c *Connector) TransferDfx(txArgs TxArgs, canID principal.Principal, execPa
 type TransferFunction func(TxArgs, principal.Principal, ExecPath) (string, error)
 
 func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun principal.Principal, execPath ExecPath) (uint64, error) {
+	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
 	receiptAmount, err := c.notifyDfx(blockNum, recipientPerun, execPath)
 	if err != nil {
 		return 0, fmt.Errorf("error notifying transfer to Perun: %v", err)
@@ -520,6 +522,7 @@ func depositFundMemPerunCLI(depositArgs DepositArgs, canID principal.Principal, 
 	formatedQueryFundingMemoArgs := utils.FormatFundingMemoArgs(addr, channelIdSlice, depositArgs.Memo)
 
 	path, err := exec.LookPath("dfx")
+
 	if err != nil {
 		return fmt.Errorf("failed to find 'dfx' executable: %w", err)
 	}

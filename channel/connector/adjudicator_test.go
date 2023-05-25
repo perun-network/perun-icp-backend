@@ -62,8 +62,6 @@ func TestConcludeDfxCLI(t *testing.T) {
 
 	log.Printf("Concluded channel via DFX CLI: %s", outpConclude)
 
-	err = s.Setup.DfxSetup.StopDFX()
-	assert.NoError(t, err, "Failed to stop DFX environment")
 }
 
 func TestConcludeAgentGO(t *testing.T) {
@@ -155,8 +153,6 @@ func TestConcludeWithdraw(t *testing.T) {
 	log.Printf("Withdrawal from channel: %s", outpWithdraw)
 	require.NoError(t, err)
 
-	err = s.Setup.DfxSetup.StopDFX()
-	assert.NoError(t, err, "Failed to stop DFX environment")
 }
 
 func TestDispute(t *testing.T) {
@@ -198,8 +194,6 @@ func TestDispute(t *testing.T) {
 	assert.Equal(t, "(opt \"successful initialization of a dispute\")\n", outpDispute)
 	t.Logf("Dispute response: %s", outpDispute)
 
-	err = s.Setup.DfxSetup.StopDFX()
-	assert.NoError(t, err, "Failed to stop DFX environment")
 }
 
 func newAdjReq(s *test.Setup, final bool) (pchannel.AdjudicatorReq, *pchannel.Params, *pchannel.State) {
