@@ -3,7 +3,6 @@ package client
 import (
 	"fmt"
 
-	//"github.com/aviate-labs/agent-go/candid"
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
 
@@ -117,7 +116,7 @@ type L1User struct {
 	Conn   *chanconn.Connector
 }
 
-func (u *L1User) GetBalance() (*uint64, error) {
+func (u *L1User) GetBalanceAG() (*uint64, error) {
 
 	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
 
@@ -128,6 +127,20 @@ func (u *L1User) GetBalance() (*uint64, error) {
 	}
 
 	fmt.Println("Balance in uint64: ", onChainBal.E8s)
+
+	return &onChainBal.E8s, nil
+}
+
+func (u *L1User) GetBalance() (*uint64, error) {
+
+	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
+
+	arr := u.Conn.L1Ledger
+	fmt.Println("sdf:", accountID.Bytes())
+	onChainBal, err := arr.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get balance: %v", err)
+	}
 
 	return &onChainBal.E8s, nil
 }

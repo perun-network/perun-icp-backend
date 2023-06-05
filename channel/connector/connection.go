@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
 	"github.com/aviate-labs/agent-go"
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 

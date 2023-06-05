@@ -4,8 +4,11 @@ package connector_test
 import (
 	"fmt"
 	"github.com/aviate-labs/agent-go"
-	"github.com/aviate-labs/agent-go/candid"
+
 	"log"
+	"net/url"
+
+	"github.com/aviate-labs/agent-go/ic/icpledger"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,13 +29,12 @@ import (
 
 func TestLedgerAgent(t *testing.T) {
 	ledgerTestConfig := setup.DfxConfig{
-		Host:        "http://127.0.0.1",
-		Port:        4943,
-		ExecPath:    "./../../test/testdata/",
-		AccountPath: "./test/testdata/identities/minter_identity.pem",
+		Host:     "http://127.0.0.1",
+		Port:     4943,
+		ExecPath: "./../../test/testdata/",
 	}
 
-	ledgerPrincipal := "ryjl3-tyaaa-aaaaa-aaaba-cai" // "ryjl3-tyaaa-aaaaa-aaaba-cai" // "rrkah-fqaaa-aaaaa-aaaaq-cai"
+	ledgerPrincipal := "rrkah-fqaaa-aaaaa-aaaaq-cai"
 
 	ledgerId, err := principal.Decode(ledgerPrincipal)
 	if err != nil {
@@ -47,25 +49,28 @@ func TestLedgerAgent(t *testing.T) {
 	}
 
 	id, err := chanconn.NewIdentity("./../../test/testdata/identities/usera_identity.pem")
-
 	if err != nil {
 		t.Fatalf("Failed to create new identity: %v", err)
 	}
 
-	a, _ := agent.New(agent.Config{
-		Identity: *id,
-	})
-
 	idPrince := (*id).Sender()
-
-	accID := idPrince.AccountIdentifier(principal.DefaultSubAccount)
-	fmt.Println("accID: ", accID)
-	args, err := candid.EncodeValueString("record { account = \"" + accID.String() + "\" }")
+	ic0, err := url.Parse(fmt.Sprintf("%s:%d", ledgerTestConfig.Host, ledgerTestConfig.Port))
 	if err != nil {
-		panic(err)
+		t.Fatalf("Failed to create ic0: %v", err)
+	}
+	ldgConfig := agent.Config{
+		Identity:     *id,
+		ClientConfig: &agent.ClientConfig{Host: ic0},
 	}
 
-	resp, err := a.QueryString(ledgerId, "account_balance_dfx", args)
+	ldgAgent, err := icpledger.NewAgent(ledgerId, ldgConfig)
+	if err != nil {
+		t.Fatalf("Failed to create ledger agent: %v", err)
+	}
+
+	accID := idPrince.AccountIdentifier(principal.DefaultSubAccount)
+
+	resp, err := ldgAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
 
 	if err != nil {
 		t.Fatalf("Failed to get account balance: %v", err)
