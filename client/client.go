@@ -7,8 +7,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/aviate-labs/agent-go"
+	"github.com/aviate-labs/agent-go/ic/icpledger"
+
 	"github.com/aviate-labs/agent-go/identity"
-	"github.com/aviate-labs/agent-go/ledger"
 	"github.com/aviate-labs/agent-go/principal"
 	"net/url"
 	"os"
@@ -29,7 +30,7 @@ import (
 type PerunUser struct {
 	L2Account wallet.Account
 	Agent     *agent.Agent
-	Ledger    *ledger.Agent
+	Ledger    *icpledger.Agent
 }
 
 // PaymentClient is a payment channel client.
@@ -50,7 +51,7 @@ func (u *PerunUser) NewL2Account() (wallet.Account, error) {
 	return acc, nil
 }
 
-func MakeLedger(accountPath, host string, canisterId principal.Principal) (*ledger.Agent, error) {
+func MakeLedger(accountPath, host string, canisterId principal.Principal) (*icpledger.Agent, error) {
 	data, err := os.ReadFile(accountPath)
 	if err != nil {
 		return nil, err
@@ -67,9 +68,14 @@ func MakeLedger(accountPath, host string, canisterId principal.Principal) (*ledg
 		return nil, fmt.Errorf("error parsing host URL: %v", err)
 	}
 
-	a := ledger.NewWithIdentity(canisterId, hostURL, agentID)
+	//a := icpledger.NewWithIdentity(canisterId, hostURL, agentID)
+	a, err := icpledger.NewAgent(canisterId, agent.Config{
+		Identity:     agentID,
+		ClientConfig: &agent.ClientConfig{Host: hostURL},
+		FetchRootKey: true,
+	})
 
-	return &a, nil
+	return a, nil
 }
 
 func NewUserConfig(balance uint64, pemAccountName, host string, port int) (setup.UserConfig, error) {
@@ -124,13 +130,16 @@ func NewUserAgent(config setup.UserConfig) (*agent.Agent, error) {
 		return nil, err
 	}
 
-	agent := agent.New(agent.Config{
+	agent, err := agent.New(agent.Config{
 		Identity: agentID,
 		ClientConfig: &agent.ClientConfig{
 			Host: ic0,
 		}})
+	if err != nil {
+		return nil, err
+	}
 
-	return &agent, nil
+	return agent, nil
 }
 
 // startWatching starts the dispute watcher for the specified channel.
@@ -182,6 +191,9 @@ func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) *PaymentC
 
 	// Start the on-chain event watcher. It automatically handles disputes.
 	c.startWatching(ch)
+
+	fmt.Println("New channel: ", ch)
+	fmt.Println("Channel Params/State: ", ch.Params(), ch.State())
 
 	return newPaymentChannel(ch, c.currency)
 }

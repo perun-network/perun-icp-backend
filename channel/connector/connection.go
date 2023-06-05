@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aviate-labs/agent-go"
+	"github.com/aviate-labs/agent-go/ic/icpledger"
+
 	"github.com/aviate-labs/agent-go/identity"
 	"github.com/aviate-labs/agent-go/principal"
 	"math/big"
@@ -20,21 +22,25 @@ import (
 )
 
 type Connector struct {
-	Log      log.Embedding
-	Agent    *agent.Agent
-	Source   *EventSource
-	Mutex    *sync.Mutex
-	PerunID  *principal.Principal
-	LedgerID *principal.Principal
-	ExecPath ExecPath
+	Log       log.Embedding
+	Agent     *agent.Agent
+	Source    *EventSource
+	Mutex     *sync.Mutex
+	PerunID   *principal.Principal
+	LedgerID  *principal.Principal
+	L1Account *principal.Principal
+	L1Ledger  *icpledger.Agent
+	ExecPath  ExecPath
 }
 
-func NewConnector(perunID, ledgerID, accountPath, execPath, host string, port int) *Connector {
+func NewConnector(perunID, ledgerID, accountPath, host string, port int) *Connector {
 
 	newAgent, err := NewAgent(accountPath, host, port)
 	if err != nil {
 		panic(err)
 	}
+
+	account := newAgent.Sender()
 
 	recipPerunID, err := utils.DecodePrincipal(perunID)
 	if err != nil {
@@ -46,16 +52,43 @@ func NewConnector(perunID, ledgerID, accountPath, execPath, host string, port in
 		panic(err)
 	}
 
+	id, err := NewIdentity(accountPath)
+	if err != nil {
+		panic(err)
+	}
+
+	ledgerAgent, err := icpledger.NewAgent(*recipLedgerID, agent.Config{
+		Identity: *id,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	chanConn := &Connector{
-		Agent:    newAgent,
-		Log:      log.MakeEmbedding(log.Default()),
-		Source:   NewEventSource(),
-		PerunID:  recipPerunID,
-		LedgerID: recipLedgerID,
-		ExecPath: ExecPath(execPath),
+		Agent:     newAgent,
+		Log:       log.MakeEmbedding(log.Default()),
+		Source:    NewEventSource(),
+		PerunID:   recipPerunID,
+		LedgerID:  recipLedgerID,
+		L1Account: &account,
+		L1Ledger:  ledgerAgent,
 	}
 
 	return chanConn
+}
+
+func NewIdentity(accountPath string) (*identity.Identity, error) {
+	data, err := os.ReadFile(accountPath)
+	if err != nil {
+		return nil, err
+	}
+	var agentID identity.Identity
+	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &agentID, nil
 }
 
 func NewAgent(accountPath, host string, port int) (*agent.Agent, error) {
@@ -73,13 +106,43 @@ func NewAgent(accountPath, host string, port int) (*agent.Agent, error) {
 		return nil, err
 	}
 
-	agent := agent.New(agent.Config{
+	agent, err := agent.New(agent.Config{
 		Identity: agentID,
 		ClientConfig: &agent.ClientConfig{
 			Host: ic0,
 		}})
+	if err != nil {
+		return nil, err
+	}
 
-	return &agent, nil
+	return agent, nil
+}
+
+func NewLedgerAgent(canID principal.Principal, accountPath, host string, port int) (*icpledger.Agent, error) {
+	data, err := os.ReadFile(accountPath)
+	if err != nil {
+		return nil, err
+	}
+	var agentID identity.Identity
+	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
+	if err != nil {
+		return nil, err
+	}
+	ic0, err := url.Parse(fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return nil, err
+	}
+
+	agent, err := icpledger.NewAgent(canID, agent.Config{
+		Identity: agentID,
+		ClientConfig: &agent.ClientConfig{
+			Host: ic0,
+		}})
+	if err != nil {
+		return nil, err
+	}
+
+	return agent, nil
 }
 
 func NewExecPath(s string) ExecPath {

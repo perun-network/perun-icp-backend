@@ -22,7 +22,7 @@ import (
 )
 
 func TestConcludeDfxCLI(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
@@ -65,7 +65,7 @@ func TestConcludeDfxCLI(t *testing.T) {
 }
 
 func TestConcludeAgentGO(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
@@ -102,7 +102,7 @@ func TestConcludeAgentGO(t *testing.T) {
 }
 
 func TestConcludeWithdraw(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
@@ -156,7 +156,7 @@ func TestConcludeWithdraw(t *testing.T) {
 }
 
 func TestDispute(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
@@ -196,7 +196,7 @@ func TestDispute(t *testing.T) {
 
 }
 
-func newAdjReq(s *test.Setup, final bool) (pchannel.AdjudicatorReq, *pchannel.Params, *pchannel.State) {
+func newAdjReq(s *test.PerunSetup, final bool) (pchannel.AdjudicatorReq, *pchannel.Params, *pchannel.State) {
 	var state *pchannel.State
 	// make sure that Version is within int64 range
 	for {

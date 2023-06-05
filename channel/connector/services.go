@@ -2,21 +2,22 @@ package connector
 
 import (
 	"fmt"
-	//"time"
-
 	"github.com/aviate-labs/agent-go/candid"
+
+	"github.com/aviate-labs/agent-go/ic/icpledger"
+
 	"github.com/aviate-labs/agent-go/principal"
 
+	"math/big"
 	"os/exec"
-
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
-
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func Conclude(nonce Nonce, parts []pwallet.Address, chDur uint64, chanId ChannelID, vers Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig, canID principal.Principal, execPath ExecPath) (string, error) {
@@ -81,13 +82,11 @@ func (c *Connector) DepositToPerunChannel(addr wallet.Address, chanID ChannelID,
 		Participant: addr,
 		Memo:        memoFunding,
 	}
-	c.Mutex.Lock()
-	_, err := queryFundingCLI(depositArgs, perunID, execPath)
+
+	_, err := queryFundingCLI(depositArgs, perunID, execPath, c)
 	if err != nil {
 		return 0, fmt.Errorf("error querying funding: %v", err)
 	}
-	c.Mutex.Unlock()
-
 	if err := depositFundMemPerunCLI(depositArgs, perunID, execPath); err != nil {
 		return 0, fmt.Errorf("error depositing: %v", err)
 	}
@@ -158,21 +157,21 @@ func queryFundingMemoCLI(depositArgs DepositArgs, canID string, execPath string)
 	return string(output), nil
 }
 
-func (c *Connector) ExecuteDFXTransfer(txArgs TxArgs, ledgerID principal.Principal, execPath ExecPath, transferFn TransferFunction) (BlockNum, error) {
-	transferFirstOutput, err := transferFn(txArgs, ledgerID, execPath)
+// func (c *Connector) ExecuteDFXTransfer(txArgs TxArgs, ledgerID principal.Principal, execPath ExecPath, transferFn TransferFunction) (BlockNum, error) {
+// 	transferFirstOutput, err := transferFn(txArgs, ledgerID, execPath)
 
-	if err != nil {
-		return 0, fmt.Errorf("error for first DFX transfer: %v", err)
-	}
+// 	if err != nil {
+// 		return 0, fmt.Errorf("error for first DFX transfer: %v", err)
+// 	}
 
-	blockNum, err := utils.ExtractBlock(transferFirstOutput)
+// 	blockNum, err := utils.ExtractBlock(transferFirstOutput)
 
-	if err != nil {
-		return 0, fmt.Errorf("error querying blocks: %v", err)
-	}
+// 	if err != nil {
+// 		return 0, fmt.Errorf("error querying blocks: %v", err)
+// 	}
 
-	return BlockNum(blockNum), nil
-}
+// 	return BlockNum(blockNum), nil
+// }
 
 func (c *Connector) QueryFunding(fundingArgs DepositArgs, queryAt principal.Principal) error {
 	// here we query the Perun Canister for the funding arguments which we send
@@ -200,15 +199,15 @@ func (c *Connector) QueryFunding(fundingArgs DepositArgs, queryAt principal.Prin
 	return nil
 }
 
-func queryFundingCLI(queryFundingArgs DepositArgs, canID principal.Principal, execPath ExecPath) (string, error) {
+func queryFundingCLI(queryFundingArgs DepositArgs, canID principal.Principal, execPath ExecPath, c *Connector) (string, error) {
 	// Query the state of the Perun canister
 
 	addr, err := queryFundingArgs.Participant.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("Error: %v", err)
 	}
-
 	formatedQueryFundingArgs := utils.FormatFundingArgs(addr, queryFundingArgs.ChannelId[:])
+
 	_, err = candid.EncodeValueString(formatedQueryFundingArgs)
 	if err != nil {
 		return "", fmt.Errorf("failed to encode query funding arguments: %w", err)
@@ -218,16 +217,25 @@ func queryFundingCLI(queryFundingArgs DepositArgs, canID principal.Principal, ex
 	if err != nil {
 		return "", fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
 	}
-	canIDString := canID.Encode()
+	c.Mutex.Lock()
 
+	canIDString := canID.Encode()
+	timeone := time.Now()
 	txCmd := exec.Command(path, "canister", "call", canIDString, "query_funding_only", formatedQueryFundingArgs)
 	txCmd.Dir = string(execPath)
 	rawOutput, err := txCmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, rawOutput)
-	}
+	timetwo := time.Now()
 
+	timeDiff := timetwo.Sub(timeone)
+	fmt.Println("Time taken for query funding: ", timeDiff)
+	if err != nil {
+		return "", fmt.Errorf("failed to query Funding: %w\nOutput: %s", err, rawOutput)
+	}
+	c.Mutex.Unlock()
 	output := string(rawOutput)
+
+	fmt.Println("output from queryfunding: ", output)
+
 	startIndex := strings.Index(output, "record {")
 	endIndex := strings.Index(output, "},") + 1
 
@@ -286,46 +294,57 @@ func QueryFidCLI(queryFidArgs DepositArgs, canID string, execPath string) (fid u
 	return memo, nil
 }
 
-func (c *Connector) TransferDfxAG(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
-	ToString := txArgs.To.String()
-	formatedTransferArgs := utils.FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, ToString)
+func MakeTransferArgs(memo uint64, amount uint64, fee uint64, recipient string) icpledger.TransferArgs {
+	p, _ := principal.Decode(recipient)
+	subAccount := icpledger.SubAccount(principal.DefaultSubAccount[:])
 
-	encodedTransferArgs, err := candid.EncodeValueString(formatedTransferArgs)
-
-	if err != nil {
-		return "", fmt.Errorf("failed to encode transfer arguments: %w", err)
+	return icpledger.TransferArgs{
+		Memo: memo,
+		Amount: icpledger.Tokens{
+			E8s: amount,
+		},
+		Fee: icpledger.Tokens{
+			E8s: fee,
+		},
+		FromSubaccount: &subAccount,
+		To:             p.AccountIdentifier(principal.DefaultSubAccount).Bytes(),
+		CreatedAtTime: &icpledger.TimeStamp{
+			TimestampNanos: uint64(time.Now().UnixNano()),
+		},
 	}
-	respNote, err := c.Agent.CallString(canID, "transfer", encodedTransferArgs)
-	if err != nil {
-		return "", fmt.Errorf("failed to call notify method: %w", err)
-	}
-
-	fmt.Println("Output from transfer using Agent Go calls: ", string(respNote))
-
-	return string(respNote), nil
 }
 
-func (c *Connector) TransferDfx(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
-	ToString := txArgs.To.String()
-	formatedTransferArgs := utils.FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, ToString)
-	path, err := exec.LookPath("dfx")
-	canIDString := canID.Encode()
+func (c *Connector) TransferDfxAG(txArgs icpledger.TransferArgs) (*icpledger.TransferResult, error) {
+	a := c.L1Ledger
+	txResp, err := a.Transfer(txArgs)
 	if err != nil {
-		return "", fmt.Errorf("dfx executable not found: %v", err)
+		return nil, fmt.Errorf("failed to transfer funds: %w", err)
 	}
 
-	txCmd := exec.Command(path, "canister", "call", canIDString, "transfer", formatedTransferArgs)
-	txCmd.Dir = string(execPath)
-	output, err := txCmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("dfx transfer command failed: %v\nOutput: %s", err, output)
-	}
-	fmt.Println("Transfer to the Perun Ledger: ", string(output))
-
-	return string(output), nil
+	return txResp, nil
 }
 
-type TransferFunction func(TxArgs, principal.Principal, ExecPath) (string, error)
+// func (c *Connector) TransferDfx(txArgs TxArgs, canID principal.Principal, execPath ExecPath) (string, error) {
+// 	ToString := txArgs.To.String()
+// 	formatedTransferArgs := utils.FormatTransferArgs(txArgs.Memo, txArgs.Amount, txArgs.Fee, ToString)
+// 	path, err := exec.LookPath("dfx")
+// 	canIDString := canID.Encode()
+// 	if err != nil {
+// 		return "", fmt.Errorf("dfx executable not found: %v", err)
+// 	}
+
+// 	txCmd := exec.Command(path, "canister", "call", canIDString, "transfer", formatedTransferArgs)
+// 	txCmd.Dir = string(execPath)
+// 	output, err := txCmd.CombinedOutput()
+// 	if err != nil {
+// 		return "", fmt.Errorf("dfx transfer command failed: %v\nOutput: %s", err, output)
+// 	}
+// 	fmt.Println("Transfer to the Perun Ledger: ", string(output))
+
+// 	return string(output), nil
+// }
+
+//type TransferFunction func(TxArgs, principal.Principal, ExecPath) (string, error)
 
 func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun principal.Principal, execPath ExecPath) (uint64, error) {
 	c.Mutex.Lock()
@@ -395,7 +414,7 @@ func QueryStateCLI(queryStateArgs string, canID string, execPath string) error {
 	txCmd.Dir = execPath
 	output, err := txCmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
+		return fmt.Errorf("failed to query the canister state: %w\nOutput: %s", err, output)
 	}
 
 	return nil
@@ -463,35 +482,68 @@ func (c *Connector) BuildDispute(acc pwallet.Account, params *pchannel.Params, s
 	return formatedRequestWithdrawalArgs, nil
 }
 
-func (c *Connector) BuildDeposit(acc wallet.Account, _amount, _fee pchannel.Bal, funding Funding) (TxArgs, error) {
-
+func (c *Connector) BuildTransfer(transactor principal.Principal, _amount, _fee *big.Int, funding Funding, receiver principal.Principal) (icpledger.TransferArgs, error) {
 	amount, err := MakeBalance(_amount)
 	if err != nil {
 
-		return TxArgs{}, err
+		return icpledger.TransferArgs{}, err
 	}
 	fee, err := MakeBalance(_fee)
 	if err != nil {
-		return TxArgs{}, err
+		return icpledger.TransferArgs{}, err
 	}
 
 	memo, err := funding.Memo()
 
 	if err != nil {
 
-		return TxArgs{}, err
+		return icpledger.TransferArgs{}, err
 	}
 
-	perunaccountID := c.PerunID.AccountIdentifier(principal.DefaultSubAccount)
+	accIDBytes := transactor.AccountIdentifier(principal.DefaultSubAccount).Bytes()
 
-	return TxArgs{
-		Memo:   memo,
-		Amount: amount,
-		Fee:    fee,
-		From:   acc.ICPAddress(), // ICPAddress is the Layer2 address on the Perun canister on the replica, it is NOT the same as the ICP address on the ledger canister on the replica
-		To:     perunaccountID,   //c.LedgerID.AccountIdentifier(principal.DefaultSubAccount),
+	return icpledger.TransferArgs{
+		Memo: memo,
+		Amount: struct {
+			E8s uint64 "ic:\"e8s\""
+		}{E8s: amount},
+		Fee: struct {
+			E8s uint64 "ic:\"e8s\""
+		}{E8s: fee},
+		FromSubaccount: &accIDBytes,
+		To:             receiver.AccountIdentifier(principal.DefaultSubAccount).Bytes(), //c.PerunID.AccountIdentifier(principal.DefaultSubAccount).Bytes(),
 	}, nil
 }
+
+// func (c *Connector) BuildDeposit(acc wallet.Account, _amount, _fee pchannel.Bal, funding Funding) (DepositArgs, error) {
+
+// 	amount, err := MakeBalance(_amount)
+// 	if err != nil {
+
+// 		return TxArgs{}, err
+// 	}
+// 	fee, err := MakeBalance(_fee)
+// 	if err != nil {
+// 		return TxArgs{}, err
+// 	}
+
+// 	memo, err := funding.Memo()
+
+// 	if err != nil {
+
+// 		return TxArgs{}, err
+// 	}
+
+// 	perunaccountID := c.PerunID.AccountIdentifier(principal.DefaultSubAccount)
+
+// 	return TxArgs{
+// 		Memo:   memo,
+// 		Amount: amount,
+// 		Fee:    fee,
+// 		From:   acc.ICPAddress(), // ICPAddress is the Layer2 address on the Perun canister on the replica, it is NOT the same as the ICP address on the ledger canister on the replica
+// 		To:     perunaccountID,   //c.LedgerID.AccountIdentifier(principal.DefaultSubAccount),
+// 	}, nil
+// }
 
 func (c *Connector) QueryMemo(memoArg uint64, queryAt principal.Principal) (string, error) {
 

@@ -3,7 +3,7 @@ module perun.network/perun-icp-backend
 go 1.19
 
 require (
-	github.com/aviate-labs/agent-go v0.2.1-0.20230510145227-334ebeef3838
+	github.com/aviate-labs/agent-go v0.3.0-alpha.1
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.2
@@ -23,7 +23,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
-	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0 // indirect
+	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

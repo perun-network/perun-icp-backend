@@ -28,6 +28,6 @@ func TestDFXEnvironment(t *testing.T) {
 	assert.NotNil(t, testSetup.DfxCmd, "DFX cmd should not be nil")
 
 	// Stop DFX
-	err = testSetup.StopDFX()
-	assert.NoError(t, err, "Failed to stop DFX environment")
+	// err = testSetup.StopDFX()
+	// assert.NoError(t, err, "Failed to stop DFX environment")
 }

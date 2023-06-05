@@ -13,6 +13,7 @@ import (
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	utils "perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
+
 	"sync"
 
 	"time"
@@ -37,17 +38,33 @@ func (f *Funder) GetAcc() *wallet.Account {
 
 func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 
-	depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
-	if err != nil {
-		return fmt.Errorf("failed to build deposit: %w", err)
-	}
+	// Transfer DFX to the Perun canister with a unique memo.
 
-	blockNum, err := d.cnr.ExecuteDFXTransfer(depositArgs, *d.cnr.LedgerID, d.cnr.ExecPath, d.cnr.TransferDfx)
+	transferArgs, err := d.cnr.BuildTransfer(*d.cnr.L1Account, req.Balance, req.Fee, req.Funding, *d.cnr.PerunID)
+
+	if err != nil {
+		return fmt.Errorf("failed to build transfer: %w", err)
+	}
+	blockNum, err := d.cnr.TransferDfxAG(transferArgs)
+
+	// depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to build deposit: %w", err)
+	// }
+	//a *icpledger.Agent, txArgs icpledger.TransferArgs, canID principal.Principal
+	//blockNum, err := d.cnr.TransferDfxAG(depositArgs)
+
+	blnm := blockNum.Ok
+	if blnm == nil {
+		panic("blockNum is nil")
+	}
+	fmt.Println("blockNum no error", blnm)
+
 	if err != nil {
 		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
 	}
 
-	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
+	_, err = d.cnr.NotifyTransferToPerun(chanconn.BlockNum(*blnm), *d.cnr.PerunID, d.cnr.ExecPath)
 
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
@@ -66,6 +83,39 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 
 	return nil
 }
+
+// func (d *Depositor) DepositOld(ctx context.Context, req *DepositReq) error {
+
+// 	depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to build deposit: %w", err)
+// 	}
+
+// 	blockNum, err := d.cnr.ExecuteDFXTransfer(depositArgs, *d.cnr.LedgerID, d.cnr.ExecPath, d.cnr.TransferDfx)
+
+// 	if err != nil {
+// 		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
+// 	}
+
+// 	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
+
+// 	if err != nil {
+// 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
+// 	}
+
+// 	addr := req.Account.ICPAddress()
+// 	memo, err := req.Funding.Memo()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to get memo from funding: %w", err)
+// 	}
+
+// 	_, err = d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *d.cnr.PerunID, d.cnr.ExecPath)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to deposit to perun channel: %w", err)
+// 	}
+
+// 	return nil
+// }
 
 func (f *Funder) FundAG(ctx context.Context, req pchannel.FundingReq) error {
 
@@ -131,6 +181,17 @@ func fundLocked(ctx context.Context, req pchannel.FundingReq, acc pwallet.Accoun
 	if err != nil {
 		return err
 	}
+
+	//transactor principal.Principal, memo uint64, _amount, _fee *big.Int, receiver principal.Principal, funding Funding
+	// transferArgs, err := conn.BuildTransfer(*conn.L1Account, wReq.Balance, wReq.Fee, wReq.Funding, *conn.PerunID)
+
+	// if err != nil {
+	// 	return fmt.Errorf("failed to build transfer: %w", err)
+	// }
+	// ledgerAgent := conn.L1Ledger
+	// blockNum, err := conn.TransferDfxAG(ledgerAgent, transferArgs)
+
+	//fmt.Println("blockNum", blockNum)
 
 	if err := NewDepositor(conn).Deposit(ctx, wReq); err != nil {
 		return err
@@ -198,7 +259,7 @@ func NewDepositReqFromPerun(req *pchannel.FundingReq, acc pwallet.Account) (*Dep
 		return nil, chanconn.ErrFundingReqIncompatible
 	}
 	bal := req.Agreement[0][req.Idx]
-	fee := big.NewInt(0)
+	fee := big.NewInt(chanconn.DfxTransferFee)
 	fReq, err := MakeFundingReq(req)
 	if err != nil {
 		return nil, errors.WithMessage(chanconn.ErrFundingReqIncompatible, err.Error())

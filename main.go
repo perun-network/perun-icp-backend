@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"perun.network/go-perun/wire"
 	"perun.network/perun-icp-backend/client"
 	"perun.network/perun-icp-backend/wallet"
@@ -29,8 +30,8 @@ func main() {
 		panic(err)
 	}
 
-	perunWlt := wallet.NewWallet()
-	_ = perunWlt.NewAccount()
+	perunWltA := wallet.NewWallet()
+	perunWltB := wallet.NewWallet()
 
 	clientAConfig, err := client.NewUserConfig(userAbalance, "usera", Host, Port)
 	if err != nil {
@@ -40,12 +41,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_, err = client.NewPerunUser(clientAConfig, ledgerPrincipal)
+	userA, err := client.NewPerunUser(clientAConfig, ledgerPrincipal)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = client.NewPerunUser(clientBConfig, ledgerPrincipal)
+	userB, err := client.NewPerunUser(clientBConfig, ledgerPrincipal)
 	if err != nil {
 		panic(err)
 	}
@@ -53,17 +54,25 @@ func main() {
 	bus := wire.NewLocalBus()
 
 	mtx := &sync.Mutex{}
+	fmt.Printf("%v\n", mtx)
 
 	// perun := chanconn.NewConnector(perunPrincipal, ledgerPrincipal, "./test/testdata/identities/usera_identity.pem", "./", Host, Port)
 	// perun.Mutex = mtx
-	_, err = client.SetupPaymentClient(bus, perunWlt, mtx, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/usera_identity.pem", "./")
+	alice, err := client.SetupPaymentClient(bus, perunWltA, mtx, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/usera_identity.pem", "./")
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = client.SetupPaymentClient(bus, perunWlt, mtx, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/userb_identity.pem", "./")
+	bob, err := client.SetupPaymentClient(bus, perunWltB, mtx, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/userb_identity.pem", "./")
 	if err != nil {
 		panic(err)
 	}
+	achan := alice.OpenChannel(bob.WireAddress(), 10)
+	fmt.Println(userA, bob, alice, userB)
 
+	fmt.Println("alicechan: ", achan.GetChannelParams().ID(), "State: ", achan.GetChannelState())
+	err = replica.StopDFX()
+	if err != nil {
+		panic(err)
+	}
 }

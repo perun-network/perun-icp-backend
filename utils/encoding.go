@@ -49,6 +49,11 @@ func FormatWithUnderscores(n uint64) string {
 	return strings.Join(parts, "_")
 }
 
+func FormatGetBalanceArgs(sendTo string) string {
+
+	return fmt.Sprintf("(record{ account = \"%s\"})", sendTo)
+}
+
 func FormatFundingArgs(addr, chanId []byte) string {
 	return fmt.Sprintf("( record { channel = blob \"%s\"; participant = %s } )", FormatHexByte(chanId), FormatVec(addr))
 }
@@ -193,6 +198,25 @@ func ExtractTxAmount(s string) (int, error) {
 	}
 
 	return value, nil
+}
+
+func ExtractBalanceNumber(s string) (uint64, error) {
+	re := regexp.MustCompile(`e8s = ([\d_]+) : nat64`)
+	matches := re.FindStringSubmatch(s)
+
+	if len(matches) != 2 {
+		return 0, fmt.Errorf("invalid input format")
+	}
+
+	// Remove underscores
+	numStr := strings.ReplaceAll(matches[1], "_", "")
+
+	num, err := strconv.ParseUint(numStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("unable to convert to uint64: %v", err)
+	}
+
+	return num, nil
 }
 
 func ExtractHoldingsNat(input string) (uint64, error) {

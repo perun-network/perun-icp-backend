@@ -2,20 +2,21 @@
 package connector_test
 
 import (
+	"fmt"
+	"github.com/aviate-labs/agent-go"
+	"github.com/aviate-labs/agent-go/candid"
 	"log"
-	"net/url"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aviate-labs/agent-go/identity"
+	//"github.com/aviate-labs/agent-go/identity"
 
 	"github.com/aviate-labs/agent-go/principal"
 
-	"github.com/aviate-labs/agent-go/ledger"
-
 	"perun.network/perun-icp-backend/channel"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
+
 	"perun.network/perun-icp-backend/channel/connector/test"
 	chtest "perun.network/perun-icp-backend/channel/test"
 	"perun.network/perun-icp-backend/setup"
@@ -31,16 +32,11 @@ func TestLedgerAgent(t *testing.T) {
 		AccountPath: "./test/testdata/identities/minter_identity.pem",
 	}
 
-	ledgerPrincipal := "rrkah-fqaaa-aaaaa-aaaaq-cai"
+	ledgerPrincipal := "ryjl3-tyaaa-aaaaa-aaaba-cai" // "ryjl3-tyaaa-aaaaa-aaaba-cai" // "rrkah-fqaaa-aaaaa-aaaaq-cai"
 
-	canId, err := principal.Decode(ledgerPrincipal)
+	ledgerId, err := principal.Decode(ledgerPrincipal)
 	if err != nil {
 		t.Fatalf("Failed to decode principal: %v", err)
-	}
-
-	url, err := url.Parse("http://127.0.0.1:4943")
-	if err != nil {
-		t.Fatalf("Failed to parse URL: %v", err)
 	}
 
 	dfx := setup.NewDfxSetup(ledgerTestConfig)
@@ -50,25 +46,31 @@ func TestLedgerAgent(t *testing.T) {
 		t.Fatalf("Failed to start Dfx: %v", err)
 	}
 
-	id, err := identity.NewRandomSecp256k1Identity()
+	id, err := chanconn.NewIdentity("./../../test/testdata/identities/usera_identity.pem")
+
 	if err != nil {
 		t.Fatalf("Failed to create new identity: %v", err)
 	}
 
-	a := ledger.NewWithIdentity(canId, url, id)
-	prID, err := principal.Decode("exqrz-uemtb-qnd6t-mvbn7-mxjre-bodlr-jnqql-tnaxm-ur6uc-mmgb4-jqe")
-	if err != nil {
-		t.Fatalf("Failed to decode principal: %v", err)
-	}
-	accID := prID.AccountIdentifier(principal.DefaultSubAccount)
-	tokens, err := a.AccountBalance(ledger.AccountBalanceArgs{
-		Account: accID,
+	a, _ := agent.New(agent.Config{
+		Identity: *id,
 	})
+
+	idPrince := (*id).Sender()
+
+	accID := idPrince.AccountIdentifier(principal.DefaultSubAccount)
+	fmt.Println("accID: ", accID)
+	args, err := candid.EncodeValueString("record { account = \"" + accID.String() + "\" }")
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err := a.QueryString(ledgerId, "account_balance_dfx", args)
+
 	if err != nil {
 		t.Fatalf("Failed to get account balance: %v", err)
 	}
-
-	t.Logf("check tokens: %v", tokens)
+	fmt.Println("resp: ", resp)
 
 	err = dfx.StopDFX()
 	if err != nil {
@@ -77,7 +79,7 @@ func TestLedgerAgent(t *testing.T) {
 }
 
 func TestQueryPerun(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
 
@@ -93,7 +95,7 @@ func TestQueryPerun(t *testing.T) {
 }
 
 func TestDepositCLI(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
@@ -111,7 +113,7 @@ func TestDepositCLI(t *testing.T) {
 }
 
 func TestDepositAG(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
@@ -129,7 +131,7 @@ func TestDepositAG(t *testing.T) {
 }
 
 func TestValidateSig(t *testing.T) {
-	s := test.NewSetup(t)
+	s := test.NewPerunSetup(t)
 
 	err := s.Setup.DfxSetup.StartDeployDfx()
 	require.NoError(t, err, "Failed to start and deploy DFX environment")

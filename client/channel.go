@@ -13,6 +13,21 @@ type PaymentChannel struct {
 	currency channel.Asset
 }
 
+func (c *PaymentChannel) GetChannel() *client.Channel {
+	return c.ch
+}
+func (c *PaymentChannel) GetChannelParams() *channel.Params {
+	return c.ch.Params()
+}
+
+func (c *PaymentChannel) GetChannelState() *channel.State {
+	return c.ch.State()
+}
+
+func (c *PaymentChannel) GetChannelAlloc() *channel.State {
+	return c.ch.State()
+}
+
 // newPaymentChannel creates a new payment channel.
 func newPaymentChannel(ch *client.Channel, currency channel.Asset) *PaymentChannel {
 	return &PaymentChannel{

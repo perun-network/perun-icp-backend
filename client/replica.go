@@ -4,6 +4,8 @@ import (
 	"perun.network/perun-icp-backend/setup"
 )
 
+const transferFee = 10000
+
 func NewReplica() *setup.DfxSetup {
 
 	demoConfig := setup.DfxConfig{

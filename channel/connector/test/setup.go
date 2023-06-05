@@ -3,12 +3,13 @@ package test
 
 import (
 	"perun.network/perun-icp-backend/channel"
+
 	chtest "perun.network/perun-icp-backend/channel/test"
 
 	"testing"
 )
 
-type Setup struct {
+type PerunSetup struct {
 	*chtest.Setup
 
 	Deps    []*channel.Depositor
@@ -16,12 +17,12 @@ type Setup struct {
 	Adjs    []*channel.Adjudicator
 }
 
-func NewSetup(t *testing.T) *Setup {
+func NewPerunSetup(t *testing.T) *PerunSetup {
 
 	s := chtest.NewMinterSetup(t)
 	c := s.Conns
 
-	ret := &Setup{Setup: s}
+	ret := &PerunSetup{Setup: s}
 
 	for i := 0; i < len(s.Accs); i++ {
 		dep := channel.NewDepositor(c[i])

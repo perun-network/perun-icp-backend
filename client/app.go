@@ -32,7 +32,7 @@ func SetupPaymentClient(
 	acc := w.NewAccount()
 
 	// Connect to Perun pallet and get funder + adjudicator from it.
-	perun := chanconn.NewConnector(perunID, ledgerID, accountPath, execPath, host, port)
+	perun := chanconn.NewConnector(perunID, ledgerID, accountPath, host, port)
 	perun.Mutex = mtx
 	fmt.Println("perun.Mutex: ", perun.Mutex, &perun.Mutex)
 

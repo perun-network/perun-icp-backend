@@ -2,7 +2,7 @@
 package connector
 
 import (
-	"github.com/aviate-labs/agent-go/principal"
+	//"github.com/aviate-labs/agent-go/principal"
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/perun-icp-backend/wallet"
@@ -109,7 +109,7 @@ type (
 )
 
 const IDLen = 32
-
+const DfxTransferFee = 10000
 const MaxBalance = uint64(1) << 30
 
 type ChannelIdx = pchannel.ID
@@ -122,16 +122,17 @@ type DepositArgs struct {
 	Participant wallet.Address
 	Memo        Memo
 }
-type TxArgs struct {
-	Memo   Memo   //Memo for the transaction: In our case, the serialized funding struct -> identifies the transaction of the user aimed to fund the Perun channel
-	Amount uint64 //Amount to be transferred to fund the channel
-	Fee    uint64 //Fee for the transaction. Note that this is always zero if we use the minter as a sender
-	From   wallet.Address
-	//From_Subaccount []byte //Subaccount from which the funds are to be transferred
-	To       principal.AccountIdentifier //AccountIdentifier of the address as a string
-	ExecPath ExecPath
-	//CreatedAt       uint64 //Timestamp of the transaction
-}
+
+// type TxArgs struct {
+// 	Memo   Memo   //Memo for the transaction: In our case, the serialized funding struct -> identifies the transaction of the user aimed to fund the Perun channel
+// 	Amount uint64 //Amount to be transferred to fund the channel
+// 	Fee    uint64 //Fee for the transaction. Note that this is always zero if we use the minter as a sender
+// 	From   wallet.Address
+// 	//From_Subaccount []byte //Subaccount from which the funds are to be transferred
+// 	To       principal.AccountIdentifier //AccountIdentifier of the address as a string
+// 	ExecPath ExecPath
+// 	//CreatedAt       uint64 //Timestamp of the transaction
+// }
 
 var ErrFundingReqIncompatible = errors.New("incompatible funding request")
 

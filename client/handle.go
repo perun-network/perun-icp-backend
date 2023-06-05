@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	//"math/big"
+	"time"
 
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
@@ -86,4 +87,14 @@ func (c *PaymentClient) HandleUpdate(cur *channel.State, next client.ChannelUpda
 // HandleAdjudicatorEvent is the callback for smart contract events.
 func (c *PaymentClient) HandleAdjudicatorEvent(e channel.AdjudicatorEvent) {
 	log.Printf("Adjudicator event: type = %T, client = %v", e, c.account)
+}
+
+func (c *PaymentClient) GetChannel() (*PaymentChannel, error) {
+	select {
+	case channel := <-c.channels:
+		c.channels <- channel // Put the channel back into the channels channel.
+		return channel, nil
+	case <-time.After(time.Second): // Set a timeout duration (e.g., 1 second).
+		return nil, fmt.Errorf("no channel available")
+	}
 }

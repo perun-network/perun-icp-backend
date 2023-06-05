@@ -5,10 +5,12 @@ import (
 	"context"
 	cr "crypto/rand"
 	"github.com/aviate-labs/agent-go/candid"
+	"github.com/aviate-labs/agent-go/principal"
 	"github.com/stretchr/testify/require"
 	"math"
 	"math/rand"
 	"path/filepath"
+
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	"perun.network/perun-icp-backend/channel"
@@ -70,8 +72,8 @@ func NewMinterSetup(t *testing.T) *Setup {
 	}
 	accs := []wallet.Account{acc1, acc2}
 	newMutex := &sync.Mutex{}
-	conn1 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.ExecPath, testConfig.Host, testConfig.Port)
-	conn2 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.ExecPath, testConfig.Host, testConfig.Port)
+	conn1 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.Host, testConfig.Port)
+	conn2 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.Host, testConfig.Port)
 
 	conn1.Mutex = newMutex
 	conn2.Mutex = newMutex
@@ -97,6 +99,13 @@ type DepositSetup struct {
 	FIDs      []uint64
 	FinalBals []pchannel.Bal
 	DReqs     []*channel.DepositReq
+}
+
+type TransferSetup struct {
+	L1Accounts  []*principal.Principal
+	MinterAcc   *principal.Principal
+	Balances    []uint64
+	AmountForTx []uint64
 }
 
 // NewRandomParamAndState generates compatible Params and State.

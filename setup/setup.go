@@ -123,7 +123,7 @@ func createLedgerArg() string {
 	)
 
 	return fmt.Sprintf(
-		"(record {minting_account = \"%s\"; initial_values = vec { record { \"%s\"; record { e8s=80_000_000 } }; record { \"%s\"; record { e8s=120_000_000 } }}; send_whitelist = vec {}})",
+		"(record {minting_account = \"%s\"; initial_values = vec { record { \"%s\"; record { e8s=100_000_000 } }; record { \"%s\"; record { e8s=100_000_000 } }}; send_whitelist = vec {}})",
 		ICP_PERUN_MINT_ACC, ICP_PERUN_USERA_ACC, ICP_PERUN_USERB_ACC,
 	)
 }
@@ -138,6 +138,7 @@ func deployLedger(path, execPath, ledgerArg string) error {
 		fmt.Printf("Error deploying ledger:\n%s\n", string(outputLedger))
 		return fmt.Errorf("error deploying ledger: %w", err)
 	}
+	fmt.Println(string(outputLedger))
 
 	return nil
 }
@@ -146,10 +147,11 @@ func deployPerun(path, execPath string) error {
 	deployPerun := exec.Command(path, "deploy", "icp_perun")
 	deployPerun.Dir = execPath
 
-	_, err := deployPerun.CombinedOutput()
+	deployMsg, err := deployPerun.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error deploying icp_perun: %w", err)
 	}
+	fmt.Println(string(deployMsg))
 
 	return nil
 }
