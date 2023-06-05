@@ -71,11 +71,35 @@ func TestLedgerAgent(t *testing.T) {
 	accID := idPrince.AccountIdentifier(principal.DefaultSubAccount)
 
 	resp, err := ldgAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
-
 	if err != nil {
 		t.Fatalf("Failed to get account balance: %v", err)
 	}
-	fmt.Println("resp: ", resp)
+	fmt.Println("resp: ", resp.E8s)
+	fromSubaccount := accID.Bytes()
+	perunPrincipal := "r7inp-6aaaa-aaaaa-aaabq-cai"
+	perunID, err := principal.Decode(perunPrincipal)
+	require.NoError(t, err, "Failed to decode principal")
+	perunaccountID := perunID.AccountIdentifier(principal.DefaultSubAccount)
+	toAccount := perunaccountID.Bytes()
+
+	txArgs := icpledger.TransferArgs{
+		Memo: 2,
+		Amount: struct {
+			E8s uint64 "ic:\"e8s\""
+		}{E8s: 50000},
+		Fee: struct {
+			E8s uint64 "ic:\"e8s\""
+		}{E8s: 10000},
+		FromSubaccount: &fromSubaccount,
+		To:             toAccount,
+	}
+
+	txRes, err := ldgAgent.Transfer(txArgs)
+
+	if err != nil {
+		t.Fatalf("Failed to transfer: %v", err)
+	}
+	fmt.Println("txRes: ", txRes)
 
 	err = dfx.StopDFX()
 	if err != nil {

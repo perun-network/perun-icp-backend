@@ -53,14 +53,12 @@ func NewConnector(perunID, ledgerID, accountPath, host string, port int) *Connec
 		panic(err)
 	}
 
-	id, err := NewIdentity(accountPath)
-	if err != nil {
-		panic(err)
-	}
+	// id, err := NewIdentity(accountPath)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	ledgerAgent, err := icpledger.NewAgent(*recipLedgerID, agent.Config{
-		Identity: *id,
-	})
+	NewLedgerAgent, err := NewLedgerAgent(*recipLedgerID, accountPath, host, port)
 	if err != nil {
 		panic(err)
 	}
@@ -72,7 +70,7 @@ func NewConnector(perunID, ledgerID, accountPath, host string, port int) *Connec
 		PerunID:   recipPerunID,
 		LedgerID:  recipLedgerID,
 		L1Account: &account,
-		L1Ledger:  ledgerAgent,
+		L1Ledger:  NewLedgerAgent,
 	}
 
 	return chanConn

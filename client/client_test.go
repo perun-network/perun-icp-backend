@@ -32,7 +32,7 @@ func TestPrincipalTransfers(t *testing.T) {
 
 		//_, err = utils.ExtractBalanceNumber(bal)
 		require.NoError(t, err, "Failed to extract balance number")
-		fmt.Println("bal before sending: ", bal)
+		fmt.Println("bal before sending: ", *bal)
 		require.NoError(t, err, "Failed to get balance")
 	}
 
@@ -78,7 +78,7 @@ func TestPrincipalTransfers(t *testing.T) {
 
 		fmt.Println("txargslisti: ", txArgsList[i])
 
-		txBal, err := s.L1Users[i].TransferDfx(txArgsList[i], ledgerID, userTags[i])
+		txBal, err := s.L1Users[i].TransferDfx(txArgsList[i], ledgerID)
 		require.NoError(t, err, "Failed to transfer")
 		fmt.Println("txBal: ", txBal)
 		bal, err := s.L1Users[i].GetBalance()
@@ -145,7 +145,7 @@ func (u *L1User) GetBalance() (*uint64, error) {
 	return &onChainBal.E8s, nil
 }
 
-func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Principal, userTag string) (uint64, error) {
+func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Principal) (uint64, error) {
 	ldg := u.Conn.L1Ledger
 
 	transferResult, err := ldg.Transfer(txArgs)
