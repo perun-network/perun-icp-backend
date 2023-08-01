@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "ledger": {
+      "wasm": "ledger.wasm",
+      "candid": "ledger.private.did",
+      "type": "custom"
+    },
+    "icp_perun": {
+      "candid": "icp_perun.did",
+      "wasm": "icp_perun-opt.wasm",
+      "type": "custom"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    }
+  },
+  "defaults": {
+    "replica": {
+      "subnet_type": "system"
+    }
+  },
+  "version": 1
+}
