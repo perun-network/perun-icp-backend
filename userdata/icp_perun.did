@@ -26,15 +26,17 @@
 
 type Error = text;
 
+type EventTxt = text;
+
 type Timestamp = nat64;
 type Duration = nat64;
 type Hash = vec nat8;
-type Nonce = Hash;
-type ChannelId = Hash;
+type Nonce = vec nat8;
+type ChannelId = vec nat8;
 type Amount = nat;
 type Memo = nat64;
 type Signature = Hash;
-type L2Account = Hash; //vec nat8;
+type L2Account = Hash;
 
 type Funding = record { channel : ChannelId; participant : L2Account };
 type FundMem = record {
@@ -42,16 +44,20 @@ type FundMem = record {
 	participant : L2Account;
 	memo : Memo;
 };
-
+type ChannelTime = record {
+	chanid : ChannelId;
+	time : Timestamp;
+};
 type Event = variant {
 	Disputed : RegisteredState;
-	Funded : record { who : L2Account; total : nat };
+	Funded : record { who : L2Account; total : Amount };
 	Concluded;
 };
 
-type ChannelTime = record {
-	chanid : vec nat8;
+type RegEvent = record {
+	chanid : ChannelId;
 	time : nat64;
+	event : Event;
 };
 
 type Params = record {
@@ -72,7 +78,7 @@ type FullySignedState = record {
 	sigs : vec blob;
 };
 
-type ConcludeRequest = record {
+type AdjRequest = record {
 	nonce : Nonce;
 	participants : vec L2Account;
 	challenge_duration : Duration;
@@ -88,6 +94,7 @@ type WithdrawalRequest = record {
 	participant : L2Account;
 	receiver : principal;
 	signature : Signature;
+	time : Timestamp;
 };
 
 type RegisteredState = record {
@@ -97,10 +104,9 @@ type RegisteredState = record {
 
 service : {
 	"deposit" : (Funding) -> (opt Error);
-	"deposit_memo" : (FundMem) -> (opt Error);
 	"query_holdings" : (Funding) -> (opt Amount) query;
-	"conclude" : (ConcludeRequest) -> (opt Error);
-	"dispute" : (ConcludeRequest) -> (opt Error);
+	"conclude" : (AdjRequest) -> (opt Error);
+	"dispute" : (AdjRequest) -> (opt Error);
 	"query_state" : (ChannelId) -> (opt RegisteredState);
 	"withdraw" : (WithdrawalRequest) -> (opt Error);
 	"query_fid" : (Funding) -> (opt Memo) query;
@@ -109,7 +115,7 @@ service : {
 	"query_funding_memo" : (FundMem) -> (opt FundMem) query;
 	"query_funding_only" : (Funding) -> (opt Funding) query;
 	"__get_candid_interface_tmp_hack" : () -> (text) query;
-	"query_events" : (ChannelTime) -> (vec Event) query;
+	"query_events" : (ChannelTime) -> (opt EventTxt) query;
 	"register_event" : (vec nat8, nat64, Event) -> ();
-	"verify_sig" : (ConcludeRequest) -> (opt Error);
+	"register_event_isolated" : (RegEvent) -> ();
 };

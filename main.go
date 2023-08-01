@@ -2,77 +2,98 @@ package main
 
 import (
 	"fmt"
-	"perun.network/go-perun/wire"
+
+	//"github.com/aviate-labs/agent-go/principal"
+	"log"
+	utils "perun.network/perun-icp-backend/utils"
+
 	"perun.network/perun-icp-backend/client"
 	"perun.network/perun-icp-backend/wallet"
-
-	"sync"
 )
 
 const (
-	Host            = "http://127.0.0.1"
-	Port            = 4943
-	ledgerHost      = "http://127.0.0.1:4943"
-	perunPrincipal  = "r7inp-6aaaa-aaaaa-aaabq-cai"
-	ledgerPrincipal = "rrkah-fqaaa-aaaaa-aaaaq-cai"
-	userAId         = "97520b79b03e38d3f6b38ce5026a813ccc9d1a3e830edb6df5970e6ca6ad84be"
-	userBId         = "40fd2dc85bc7d264b31f1fa24081d7733d303b49b7df84e3d372338f460aa678"
-	userAbalance    = 100000
-	userBbalance    = 200000
+	Host              = "http://127.0.0.1"
+	Port              = 4943
+	perunPrincipal    = "be2us-64aaa-aaaaa-qaabq-cai"
+	ledgerPrincipal   = "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+	userAId           = "97520b79b03e38d3f6b38ce5026a813ccc9d1a3e830edb6df5970e6ca6ad84be"
+	userBId           = "40fd2dc85bc7d264b31f1fa24081d7733d303b49b7df84e3d372338f460aa678"
+	userAPemPath      = "./userdata/identities/usera_identity.pem"
+	userBPemPath      = "./userdata/identities/userb_identity.pem"
+	channelCollateral = 50000
 )
 
 func main() {
 
-	replica := client.NewReplica()
-
-	err := replica.StartDeployDfx()
-	if err != nil {
-		panic(err)
-	}
-
 	perunWltA := wallet.NewWallet()
 	perunWltB := wallet.NewWallet()
 
-	clientAConfig, err := client.NewUserConfig(userAbalance, "usera", Host, Port)
-	if err != nil {
-		panic(err)
-	}
-	clientBConfig, err := client.NewUserConfig(userAbalance, "userb", Host, Port)
-	if err != nil {
-		panic(err)
-	}
-	userA, err := client.NewPerunUser(clientAConfig, ledgerPrincipal)
+	sharedComm := client.InitSharedComm()
+
+	alice, err := client.SetupPaymentClient(perunWltA, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userAPemPath)
 	if err != nil {
 		panic(err)
 	}
 
-	userB, err := client.NewPerunUser(clientBConfig, ledgerPrincipal)
+	bob, err := client.SetupPaymentClient(perunWltB, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userBPemPath)
 	if err != nil {
 		panic(err)
 	}
+	alice.OpenChannel(bob.WireAddress(), channelCollateral)
+	achan := alice.Channel
+	bob.AcceptedChannel()
+	bchan := bob.Channel
 
-	bus := wire.NewLocalBus()
+	balanceA := alice.GetOwnBalance()
+	balanceB := bob.GetOwnBalance()
 
-	mtx := &sync.Mutex{}
-	fmt.Printf("%v\n", mtx)
+	fmt.Println("balance alice: ", balanceA)
+	fmt.Println("balance bob: ", balanceB)
 
-	// perun := chanconn.NewConnector(perunPrincipal, ledgerPrincipal, "./test/testdata/identities/usera_identity.pem", "./", Host, Port)
-	// perun.Mutex = mtx
-	alice, err := client.SetupPaymentClient(bus, perunWltA, mtx, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/usera_identity.pem", "./")
+	fmt.Println("Seechan: ", achan, &achan)
+
+	aliceBal := alice.GetChannelBalance()
+	bobBal := bob.GetChannelBalance()
+
+	fmt.Println("Perun Canister total balance: ", aliceBal, bobBal)
+
+	// sending payment/s
+
+	log.Println("Sending payments...")
+	achan.SendPayment(1000)
+	bchan.SendPayment(2000)
+
+	fmt.Println("achan: ", achan.GetChannel().State(), "bchan: ", bchan.GetChannel().State())
+
+	log.Println("Settling channel")
+	bchan.Settle()
+	fmt.Println("still blocking??")
+
+	perunBalAfter1 := alice.GetChannelBalance()
+	perunBalBfter1 := bob.GetChannelBalance()
+
+	fmt.Println("Perun Canister total balance after 1st Settle: ", perunBalAfter1, perunBalBfter1)
+
+	achan.Settle()
+	fmt.Println("Did i settle? bob")
+	perunBalAfter2 := alice.GetChannelBalance()
+	perunBalBfter2 := bob.GetChannelBalance()
+
+	fmt.Println("Perun Canister total balance after 2nd Settle: ", perunBalAfter2, perunBalBfter2)
+
+	alice.Shutdown()
+	bob.Shutdown()
+
+	recipPerunID, err := utils.DecodePrincipal(perunPrincipal)
 	if err != nil {
 		panic(err)
 	}
+	perunBal := alice.GetExtBalance(*recipPerunID)
+	balanceAZ := alice.GetOwnBalance()
+	balanceBZ := bob.GetOwnBalance()
 
-	bob, err := client.SetupPaymentClient(bus, perunWltB, mtx, perunPrincipal, ledgerPrincipal, Host, Port, "./test/testdata/identities/userb_identity.pem", "./")
-	if err != nil {
-		panic(err)
-	}
-	achan := alice.OpenChannel(bob.WireAddress(), 10)
-	fmt.Println(userA, bob, alice, userB)
+	fmt.Println("balance alice: ", balanceAZ)
+	fmt.Println("balance bob: ", balanceBZ)
 
-	fmt.Println("alicechan: ", achan.GetChannelParams().ID(), "State: ", achan.GetChannelState())
-	err = replica.StopDFX()
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println("Perun Canister total balance after Settle: ", perunBal)
 }

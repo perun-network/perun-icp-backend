@@ -15,4 +15,7 @@ var (
 	ErrStateIncompatible = errors.New("incompatible state")
 	// ErrIdentLenMismatch the length of an identity was wrong.
 	ErrIdentLenMismatch = errors.New("length of an identity was wrong")
+	// Channel was assumed concluded, but is not
+	ErrNotConcluded = errors.New("channel not concluded")
+	ErrFundTransfer = errors.New("funding transfer failed")
 )

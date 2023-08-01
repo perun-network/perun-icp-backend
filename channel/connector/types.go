@@ -2,10 +2,7 @@
 package connector
 
 import (
-	//"github.com/aviate-labs/agent-go/principal"
-	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
-	"perun.network/perun-icp-backend/wallet"
 )
 
 // Unique channel identifier
@@ -90,6 +87,7 @@ type (
 	}
 
 	// Funding is used to calculate a FundingId.
+	// TODO: move to funder package?
 	Funding struct {
 		// Channel is the channel to fund.
 		Channel ChannelID
@@ -117,38 +115,7 @@ type Memo = uint64
 type BlockNum uint64
 type ExecPath string
 
-type DepositArgs struct {
-	ChannelId   ChannelID
-	Participant wallet.Address
-	Memo        Memo
-}
-
-// type TxArgs struct {
-// 	Memo   Memo   //Memo for the transaction: In our case, the serialized funding struct -> identifies the transaction of the user aimed to fund the Perun channel
-// 	Amount uint64 //Amount to be transferred to fund the channel
-// 	Fee    uint64 //Fee for the transaction. Note that this is always zero if we use the minter as a sender
-// 	From   wallet.Address
-// 	//From_Subaccount []byte //Subaccount from which the funds are to be transferred
-// 	To       principal.AccountIdentifier //AccountIdentifier of the address as a string
-// 	ExecPath ExecPath
-// 	//CreatedAt       uint64 //Timestamp of the transaction
-// }
-
-var ErrFundingReqIncompatible = errors.New("incompatible funding request")
-
 // Notifies the user of the block number of the transfer
 type NotifyArgs struct {
 	Blocknum uint64
-}
-
-// Queries the ledger for the funding properties of a channel
-type QueryArgs struct {
-	ChannelId   []byte
-	Participant wallet.Address
-}
-
-type Event struct {
-	EventType string
-	Who       string
-	Total     uint64
 }

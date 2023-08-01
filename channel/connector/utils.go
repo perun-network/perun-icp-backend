@@ -8,75 +8,74 @@ import (
 	"math/rand"
 	"os/exec"
 	"perun.network/perun-icp-backend/utils"
-	"strconv"
-	"strings"
 )
 
 func FormatQueryStateArgs(chanId ChannelID) string {
 	return fmt.Sprintf("(%s)", utils.FormatVec(chanId[:8]))
 }
-func extractEventData(input string) ([]Event, error) {
-	lines := strings.Split(input, "\n")
-	var events []Event
-	var currentEvent *Event
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
+// func extractEventData(input string) ([]Event, error) {
+// 	lines := strings.Split(input, "\n")
+// 	var events []Event
+// 	var currentEvent *Event
 
-		eventTypes := []string{"Funded", "Disputed", "Concluded"}
-		for _, eventType := range eventTypes {
-			if strings.Contains(line, eventType) {
-				if currentEvent != nil {
-					events = append(events, *currentEvent)
-				}
-				currentEvent = &Event{EventType: eventType}
-				break
-			}
-		}
+// 	for _, line := range lines {
+// 		line = strings.TrimSpace(line)
 
-		startIdx := strings.Index(line, "blob \"")
-		endIdx := strings.Index(line, "\";")
-		if startIdx != -1 && endIdx != -1 && startIdx < endIdx {
-			who := line[startIdx+len("blob \"") : endIdx]
-			if currentEvent != nil {
-				currentEvent.Who = who
-			}
-		}
+// 		eventTypes := []string{"Funded", "Disputed", "Concluded"}
+// 		for _, eventType := range eventTypes {
+// 			if strings.Contains(line, eventType) {
+// 				if currentEvent != nil {
+// 					events = append(events, *currentEvent)
+// 				}
+// 				currentEvent = &Event{EventType: eventType}
+// 				break
+// 			}
+// 		}
 
-		totalStartIdx := strings.Index(line, "total =")
-		if totalStartIdx != -1 {
-			totalEndIdx := strings.Index(line, " : nat;")
-			cleanedNumber := strings.ReplaceAll(line[totalStartIdx+len("total ="):totalEndIdx], "_", "")
-			cleanedNumber = strings.TrimSpace(cleanedNumber)
-			total, err := strconv.ParseUint(cleanedNumber, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse total: %v", err)
-			}
-			if currentEvent != nil {
-				currentEvent.Total = total
-			}
-		}
-	}
+// 		startIdx := strings.Index(line, "blob \"")
+// 		endIdx := strings.Index(line, "\";")
+// 		if startIdx != -1 && endIdx != -1 && startIdx < endIdx {
+// 			who := line[startIdx+len("blob \"") : endIdx]
+// 			if currentEvent != nil {
+// 				currentEvent.Who = who
+// 			}
+// 		}
 
-	if currentEvent != nil {
-		events = append(events, *currentEvent)
-	}
+// 		totalStartIdx := strings.Index(line, "total =")
+// 		if totalStartIdx != -1 {
+// 			totalEndIdx := strings.Index(line, " : nat;")
+// 			cleanedNumber := strings.ReplaceAll(line[totalStartIdx+len("total ="):totalEndIdx], "_", "")
+// 			cleanedNumber = strings.TrimSpace(cleanedNumber)
+// 			total, err := strconv.ParseUint(cleanedNumber, 10, 64)
+// 			if err != nil {
+// 				return nil, fmt.Errorf("failed to parse total: %v", err)
+// 			}
+// 			if currentEvent != nil {
+// 				currentEvent.Total = total
+// 			}
+// 		}
+// 	}
 
-	return events, nil
-}
+// 	if currentEvent != nil {
+// 		events = append(events, *currentEvent)
+// 	}
 
-func StringIntoEvents(input string) ([]Event, error) {
-	events, err := extractEventData(input)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return []Event{}, err
-	}
+// 	return events, nil
+// }
 
-	for _, event := range events {
-		fmt.Printf("What: %s, Who: %s, Total: %d\n", event.EventType, event.Who, event.Total)
-	}
-	return events, nil
-}
+// func StringIntoEvents(input string) ([]Event, error) {
+// 	events, err := extractEventData(input)
+// 	if err != nil {
+// 		fmt.Printf("Error: %v\n", err)
+// 		return []Event{}, err
+// 	}
+
+// 	for _, event := range events {
+// 		fmt.Printf("What: %s, Who: %s, Total: %d\n", event.EventType, event.Who, event.Total)
+// 	}
+// 	return events, nil
+// }
 
 func execCanisterCommand(path, canID, method, args string, execPath ExecPath) (string, error) {
 	txCmd := exec.Command(path, "canister", "call", canID, method, args)

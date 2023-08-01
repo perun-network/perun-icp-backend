@@ -11,37 +11,80 @@ import (
 	"github.com/aviate-labs/agent-go"
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 
-	"github.com/aviate-labs/agent-go/identity"
-	"github.com/aviate-labs/agent-go/principal"
 	"math/big"
 	"net/url"
 	"os"
 	"sync"
 
+	"github.com/aviate-labs/agent-go/identity"
+	"github.com/aviate-labs/agent-go/principal"
+
 	"perun.network/go-perun/log"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 	utils "perun.network/perun-icp-backend/utils"
 )
 
 type Connector struct {
-	Log       log.Embedding
-	Agent     *agent.Agent
-	Source    *EventSource
-	Mutex     *sync.Mutex
-	PerunID   *principal.Principal
-	LedgerID  *principal.Principal
-	L1Account *principal.Principal
-	L1Ledger  *icpledger.Agent
-	ExecPath  ExecPath
+	Log         log.Embedding
+	DfxAgent    *agent.Agent
+	Mutex       *sync.Mutex
+	PerunID     *principal.Principal
+	LedgerID    *principal.Principal
+	L1Account   *principal.Principal
+	LedgerAgent *icpledger.Agent
+	PerunAgent  *icperun.Agent
 }
 
-func NewConnector(perunID, ledgerID, accountPath, host string, port int) *Connector {
+// func NewDfxConnector(pemAccountPath string, ledgerAddr, perunAddr string, host string, port int) (*DfxConnector, error) {
 
-	newAgent, err := NewAgent(accountPath, host, port)
+// 	pemAccountFullPath := filepath.Join(utils.SetHomeDir(), ".config", "dfx", "identity", pemAccountPath, "identity.pem")
+
+// 	ledgerPrincipal, err := principal.Decode(ledgerAddr)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	perunPrincipal, err := principal.Decode(perunAddr)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	dfxAgent, err := NewDfxAgent(pemAccountFullPath, host, port)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	dfxConnector := &DfxConnector{
+// 		dfxAgent: dfxAgent,
+// 	}
+
+// 	dfxConnector.ledgerAgent, err = MakeLedgerAgent(pemAccountFullPath, host, port, ledgerPrincipal)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	dfxConnector.perunAgent, err = MakePerunAgent(pemAccountFullPath, host, port, perunPrincipal)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// perunUser.l2Account, err = perunUser.NewL2Account()
+// 	// if err != nil {
+// 	// 	return nil, err
+// 	// }
+
+// 	return dfxConnector, nil
+// }
+
+// func NewDfxConnector(pemAccountPath string, ledgerAddr, perunAddr string, host string, port int) (*DfxConnector, error) {
+func NewDfxConnector(perunID, ledgerID, pemAccountPath, host string, port int) *Connector {
+
+	dfxAgent, err := NewDfxAgent(pemAccountPath, host, port)
 	if err != nil {
 		panic(err)
 	}
 
-	account := newAgent.Sender()
+	dfxAccount := dfxAgent.Sender()
 
 	recipPerunID, err := utils.DecodePrincipal(perunID)
 	if err != nil {
@@ -53,24 +96,23 @@ func NewConnector(perunID, ledgerID, accountPath, host string, port int) *Connec
 		panic(err)
 	}
 
-	// id, err := NewIdentity(accountPath)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	NewLedgerAgent, err := NewLedgerAgent(*recipLedgerID, accountPath, host, port)
+	LedgerAgent, err := NewLedgerAgent(*recipLedgerID, pemAccountPath, host, port)
 	if err != nil {
 		panic(err)
 	}
 
+	PerunAgent, err := NewPerunAgent(*recipPerunID, pemAccountPath, host, port)
+	if err != nil {
+		panic(err)
+	}
 	chanConn := &Connector{
-		Agent:     newAgent,
-		Log:       log.MakeEmbedding(log.Default()),
-		Source:    NewEventSource(),
-		PerunID:   recipPerunID,
-		LedgerID:  recipLedgerID,
-		L1Account: &account,
-		L1Ledger:  NewLedgerAgent,
+		DfxAgent:    dfxAgent,
+		Log:         log.MakeEmbedding(log.Default()),
+		PerunID:     recipPerunID,
+		LedgerID:    recipLedgerID,
+		L1Account:   &dfxAccount,
+		LedgerAgent: LedgerAgent,
+		PerunAgent:  PerunAgent,
 	}
 
 	return chanConn
@@ -90,7 +132,7 @@ func NewIdentity(accountPath string) (*identity.Identity, error) {
 	return &agentID, nil
 }
 
-func NewAgent(accountPath, host string, port int) (*agent.Agent, error) {
+func NewDfxAgent(accountPath string, host string, port int) (*agent.Agent, error) {
 	data, err := os.ReadFile(accountPath)
 	if err != nil {
 		return nil, err
@@ -109,7 +151,69 @@ func NewAgent(accountPath, host string, port int) (*agent.Agent, error) {
 		Identity: agentID,
 		ClientConfig: &agent.ClientConfig{
 			Host: ic0,
-		}})
+		},
+		FetchRootKey: true})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return agent, nil
+}
+
+// func NewAgent(accountPath, host string, port int) (*agent.Agent, error) {
+// 	data, err := os.ReadFile(accountPath)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var agentID identity.Identity
+// 	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	ic0, err := url.Parse(fmt.Sprintf("%s:%d", host, port))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	fmt.Println("ic0: ", ic0)
+
+// 	agent, err := agent.New(agent.Config{
+// 		Identity: agentID,
+// 		ClientConfig: &agent.ClientConfig{
+// 			Host: ic0,
+// 		},
+// 		FetchRootKey: true,
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return agent, nil
+// }
+
+func NewPerunAgent(canID principal.Principal, accountPath, host string, port int) (*icperun.Agent, error) {
+	data, err := os.ReadFile(accountPath)
+	if err != nil {
+		return nil, err
+	}
+	var agentID identity.Identity
+	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
+	if err != nil {
+		return nil, err
+	}
+	ic0, err := url.Parse(fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return nil, err
+	}
+
+	agent, err := icperun.NewAgent(canID, agent.Config{
+		Identity: agentID,
+		ClientConfig: &agent.ClientConfig{
+			Host: ic0,
+		},
+		FetchRootKey: true,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +240,9 @@ func NewLedgerAgent(canID principal.Principal, accountPath, host string, port in
 		Identity: agentID,
 		ClientConfig: &agent.ClientConfig{
 			Host: ic0,
-		}})
+		},
+		FetchRootKey: true,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -144,19 +250,21 @@ func NewLedgerAgent(canID principal.Principal, accountPath, host string, port in
 	return agent, nil
 }
 
-func NewExecPath(s string) ExecPath {
-	return ExecPath(s)
-}
+// func NewExecPath(s string) ExecPath {
+// 	return ExecPath(s)
+// }
 
 func (f *Funding) Memo() (uint64, error) {
-	// The memo is the unique channel ID, which is the first 8 bytes of the hash of the serialized funding candid
-	serializedFunding, err := f.SerializeFundingCandid()
-	if err != nil {
-		return 0, fmt.Errorf("error in serializing funding: %w", err)
-	}
 
-	hasher := sha512.New()
-	hasher.Write(serializedFunding)
+	hasher := sha512.New() // Assuming Hash::digest uses SHA-512.
+
+	chanBytes := f.Channel[:]
+	addrBytes := f.Part[:]
+
+	channelAddr := append(chanBytes, addrBytes...)
+
+	hasher.Write(channelAddr)
+
 	fullHash := hasher.Sum(nil)
 
 	var arr [8]byte

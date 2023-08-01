@@ -65,6 +65,25 @@ func (f Funding) ID() (FundingID, error) {
 	return fid, nil
 }
 
+func (f *Funding) SerializeFundingCandidFull() ([]byte, error) {
+	// Encodes the funding struct
+	addr := f.Part[:]
+
+	fullArg := fmt.Sprintf("( record { channel = %s; participant = %s })", utils.FormatVec(f.Channel[:8]), utils.FormatVec(addr))
+
+	enc, err := candid.EncodeValueString(fullArg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode Funding as Candid value: %w", err)
+	}
+
+	_, err = candid.DecodeValueString(enc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode encoded Funding Candid value: %w", err)
+	}
+
+	return enc, nil
+}
+
 func (f *Funding) SerializeFundingCandid() ([]byte, error) {
 	// Encodes the funding struct
 	addr := f.Part[:]
@@ -134,7 +153,7 @@ func MakeAlloc(a *pchannel.Allocation) ([]Balance, error) {
 	return ret, err
 }
 
-func NewState(s *pchannel.State) (*State, error) {
+func StateForChain(s *pchannel.State) (*State, error) {
 	if err := s.Valid(); err != nil {
 		return nil, ErrStateIncompatible
 	}

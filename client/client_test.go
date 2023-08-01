@@ -6,7 +6,7 @@ import (
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
 
-	"github.com/stretchr/testify/assert"
+	//"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	chanconn "perun.network/perun-icp-backend/channel/connector"
@@ -18,19 +18,10 @@ import (
 func TestPrincipalTransfers(t *testing.T) {
 	s := SimpleTxSetup(t)
 
-	err := s.L1Setup.DfxSetup.StartDeployDfx()
-	require.NoError(t, err, "Failed to start and deploy DFX environment")
-
-	defer func() {
-		err := s.L1Setup.DfxSetup.StopDFX()
-		assert.NoError(t, err, "Failed to stop DFX environment")
-	}()
-
 	for i := 0; i < len(s.L1Users); i++ {
 		bal, err := s.L1Users[i].GetBalance()
 		require.NoError(t, err, "Failed to get balance")
 
-		//_, err = utils.ExtractBalanceNumber(bal)
 		require.NoError(t, err, "Failed to extract balance number")
 		fmt.Println("bal before sending: ", *bal)
 		require.NoError(t, err, "Failed to get balance")
@@ -42,8 +33,8 @@ func TestPrincipalTransfers(t *testing.T) {
 	txBalances[0] = 1000000
 	txBalances[1] = 2000000
 
-	ledgerPrincipal := "rrkah-fqaaa-aaaaa-aaaaq-cai" // "ryjl3-tyaaa-aaaaa-aaaba-cai" // "rrkah-fqaaa-aaaaa-aaaaq-cai"
-	perunPrincipal := "r7inp-6aaaa-aaaaa-aaabq-cai"
+	ledgerPrincipal := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+	perunPrincipal := "be2us-64aaa-aaaaa-qaabq-cai"
 
 	//sender1 := s.L1Users[0].Prince.AccountIdentifier(principal.DefaultSubAccount)
 
@@ -62,7 +53,7 @@ func TestPrincipalTransfers(t *testing.T) {
 	userTags[1] = "userb"
 
 	for i := 0; i < len(s.L1Users); i++ {
-		fromSubaccount := s.L1Users[i].Prince.AccountIdentifier(principal.DefaultSubAccount).Bytes()
+		//fromSubaccount := s.L1Users[i].Prince.AccountIdentifier(principal.DefaultSubAccount).Bytes()
 		toAccount := perunaccountID.Bytes()
 		txArgsList[i] = icpledger.TransferArgs{
 			Memo: uint64(i),
@@ -72,8 +63,8 @@ func TestPrincipalTransfers(t *testing.T) {
 			Fee: struct {
 				E8s uint64 "ic:\"e8s\""
 			}{E8s: 10000},
-			FromSubaccount: &fromSubaccount,
-			To:             toAccount,
+			//FromSubaccount: &fromSubaccount,
+			To: toAccount,
 		}
 
 		fmt.Println("txargslisti: ", txArgsList[i])
@@ -89,8 +80,8 @@ func TestPrincipalTransfers(t *testing.T) {
 	balpr, err := s.PerunNode.GetBalance()
 	require.NoError(t, err, "Failed to get balance")
 	fmt.Println("balpr: ", balpr)
-	err = s.L1Setup.DfxSetup.StopDFX()
-	assert.NoError(t, err, "Failed to stop DFX environment")
+	// err = s.L1Setup.DfxSetup.StopDFX()
+	// assert.NoError(t, err, "Failed to stop DFX environment")
 }
 
 func NewL1User(prince *principal.Principal, c *chanconn.Connector) *L1User {
@@ -104,13 +95,20 @@ type L1Setup struct {
 	PerunPrince *principal.Principal
 	Conns       []*chanconn.Connector
 	ConnPerun   *chanconn.Connector
-	*setup.DfxSetup
 }
+
 type OnChainSetup struct {
 	*L1Setup
 	L1Users   []*L1User
 	PerunNode *L1User
 }
+
+type OnChainBareSetup struct {
+	*L1Setup
+	L1Users   []*L1User
+	PerunNode *L1User
+}
+
 type L1User struct {
 	Prince *principal.Principal
 	Conn   *chanconn.Connector
@@ -120,7 +118,7 @@ func (u *L1User) GetBalanceAG() (*uint64, error) {
 
 	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
 
-	arr := u.Conn.L1Ledger
+	arr := u.Conn.LedgerAgent
 	onChainBal, err := arr.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %v", err)
@@ -135,7 +133,7 @@ func (u *L1User) GetBalance() (*uint64, error) {
 
 	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
 
-	arr := u.Conn.L1Ledger
+	arr := u.Conn.LedgerAgent
 	fmt.Println("sdf:", accountID.Bytes())
 	onChainBal, err := arr.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
 	if err != nil {
@@ -146,7 +144,7 @@ func (u *L1User) GetBalance() (*uint64, error) {
 }
 
 func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Principal) (uint64, error) {
-	ldg := u.Conn.L1Ledger
+	ldg := u.Conn.LedgerAgent
 
 	transferResult, err := ldg.Transfer(txArgs)
 	if err != nil {
@@ -168,8 +166,6 @@ func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Prin
 		default:
 			fmt.Println("Transfer failed due to unknown reasons.")
 		}
-		// Convert the error to a string using the String() method of the error,
-		// which should give you a nice, formatted string.
 		return 0, fmt.Errorf("transfer failed with error: %v", transferResult.Err)
 	}
 
@@ -181,14 +177,14 @@ func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Prin
 	return *blnm, nil
 }
 
-func SimpleTxSetup(t *testing.T) *OnChainSetup {
+func SimpleTxSetup(t *testing.T) *OnChainBareSetup {
 
-	s := NewTransferSetup(t)
+	s := TransferSetup(t)
 	c := s.Conns
 	cp := s.ConnPerun
 	pP := s.PerunPrince
 
-	ret := &OnChainSetup{L1Setup: s}
+	ret := &OnChainBareSetup{L1Setup: s}
 
 	for i := 0; i < len(s.Accs); i++ {
 		dep := NewL1User(s.Accs[i], c[i])
@@ -200,13 +196,11 @@ func SimpleTxSetup(t *testing.T) *OnChainSetup {
 	return ret
 }
 
-// Generic transfer Setup for testing transfers to the ledger
-func NewTransferSetup(t *testing.T) *L1Setup {
+func TransferSetup(t *testing.T) *L1Setup {
 
 	testConfig := setup.DfxConfig{
-		Host:     "http://127.0.0.1",
-		Port:     4943,
-		ExecPath: "./../test/testdata/",
+		Host: "http://127.0.0.1",
+		Port: 4943,
 	}
 
 	aliceAccPath := "./../test/testdata/identities/usera_identity.pem"
@@ -231,21 +225,19 @@ func NewTransferSetup(t *testing.T) *L1Setup {
 	bobPrince := (*bobAcc).Sender()
 	minterPrince := (*minterAcc).Sender()
 
-	perunID := "r7inp-6aaaa-aaaaa-aaabq-cai"
-	ledgerID := "rrkah-fqaaa-aaaaa-aaaaq-cai" // "rrkah-fqaaa-aaaaa-aaaaq-cai" //"ryjl3-tyaaa-aaaaa-aaaba-cai"
+	perunID := "be2us-64aaa-aaaaa-qaabq-cai"
+	ledgerID := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
 
 	perunPrince, err := principal.Decode(perunID)
 	if err != nil {
 		panic(err)
 	}
 
-	dfx := setup.NewDfxSetup(testConfig)
-
 	accs := []*principal.Principal{&alicePrince, &bobPrince}
-	conn1 := chanconn.NewConnector(perunID, ledgerID, aliceAccPath, testConfig.Host, testConfig.Port)
-	conn2 := chanconn.NewConnector(perunID, ledgerID, bobAccPath, testConfig.Host, testConfig.Port)
-	connPerun := chanconn.NewConnector(perunID, ledgerID, minterAccPath, testConfig.Host, testConfig.Port)
+	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, testConfig.Host, testConfig.Port)
+	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, testConfig.Host, testConfig.Port)
+	connPerun := chanconn.NewDfxConnector(perunID, ledgerID, minterAccPath, testConfig.Host, testConfig.Port)
 
 	conns := []*chanconn.Connector{conn1, conn2}
-	return &L1Setup{t, accs, &minterPrince, &perunPrince, conns, connPerun, dfx}
+	return &L1Setup{t, accs, &minterPrince, &perunPrince, conns, connPerun}
 }

@@ -4,142 +4,45 @@ package client
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
-	"github.com/aviate-labs/agent-go"
-	"github.com/aviate-labs/agent-go/ic/icpledger"
+	chanconn "perun.network/perun-icp-backend/channel/connector"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 
-	"github.com/aviate-labs/agent-go/identity"
-	"github.com/aviate-labs/agent-go/principal"
-	"net/url"
-	"os"
-	"path/filepath"
-	"perun.network/go-perun/channel"
+	"sync"
+
+	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 	"perun.network/go-perun/wire"
 
 	"math/big"
 	"perun.network/go-perun/wallet"
-	icchannel "perun.network/perun-icp-backend/channel"
-	"perun.network/perun-icp-backend/setup"
-	"perun.network/perun-icp-backend/utils"
+	"perun.network/perun-icp-backend/channel"
 	icwallet "perun.network/perun-icp-backend/wallet"
 	icwire "perun.network/perun-icp-backend/wire"
 )
 
-type PerunUser struct {
-	L2Account wallet.Account
-	Agent     *agent.Agent
-	Ledger    *icpledger.Agent
+type SharedComm struct {
+	bus   wire.Bus
+	mutex *sync.Mutex
 }
 
 // PaymentClient is a payment channel client.
 type PaymentClient struct {
 	perunClient *client.Client       // The core Perun client.
 	account     wallet.Address       // The account we use for on-chain and off-chain transactions.
-	currency    channel.Asset        // The currency we expect to get paid in.
+	currency    pchannel.Asset       // The currency we expect to get paid in.
 	channels    chan *PaymentChannel // Accepted payment channels.
+	Channel     *PaymentChannel      // The current payment channel.
+	dfxConn     *chanconn.Connector  // The connector to the Dfx blockchain
 }
 
-func (u *PerunUser) NewL2Account() (wallet.Account, error) {
-	wlt, err := icwallet.NewRAMWallet(rand.Reader)
-	if err != nil {
-		return nil, err
+func InitSharedComm() *SharedComm {
+	bus := wire.NewLocalBus()
+	mutex := &sync.Mutex{}
+	return &SharedComm{
+		bus:   bus,
+		mutex: mutex,
 	}
-	acc := wlt.NewAccount()
-
-	return acc, nil
-}
-
-func MakeLedger(accountPath, host string, canisterId principal.Principal) (*icpledger.Agent, error) {
-	data, err := os.ReadFile(accountPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var agentID identity.Identity
-	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
-	if err != nil {
-		return nil, err
-	}
-
-	hostURL, err := url.Parse(host)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing host URL: %v", err)
-	}
-
-	//a := icpledger.NewWithIdentity(canisterId, hostURL, agentID)
-	a, err := icpledger.NewAgent(canisterId, agent.Config{
-		Identity:     agentID,
-		ClientConfig: &agent.ClientConfig{Host: hostURL},
-		FetchRootKey: true,
-	})
-
-	return a, nil
-}
-
-func NewUserConfig(balance uint64, pemAccountName, host string, port int) (setup.UserConfig, error) {
-	return setup.UserConfig{
-		Host:        host,
-		Port:        port,
-		Balance:     balance,
-		AccountPath: filepath.Join(utils.SetHomeDir(), ".config", "dfx", "identity", pemAccountName, "identity.pem"),
-	}, nil
-}
-
-func NewPerunUser(config setup.UserConfig, ledgerAddr string) (*PerunUser, error) {
-
-	ledgerPrincipal, err := principal.Decode(ledgerAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	agent, err := NewUserAgent(config)
-	if err != nil {
-		return nil, err
-	}
-	perunUser := &PerunUser{
-		Agent: agent,
-	}
-
-	perunUser.Ledger, err = MakeLedger(config.AccountPath, config.Host, ledgerPrincipal)
-	if err != nil {
-		return nil, err
-	}
-
-	perunUser.L2Account, err = perunUser.NewL2Account()
-	if err != nil {
-		return nil, err
-	}
-
-	return perunUser, nil
-}
-
-func NewUserAgent(config setup.UserConfig) (*agent.Agent, error) {
-	data, err := os.ReadFile(config.AccountPath)
-	if err != nil {
-		return nil, err
-	}
-	var agentID identity.Identity
-	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
-	if err != nil {
-		return nil, err
-	}
-	ic0, err := url.Parse(fmt.Sprintf("%s:%d", config.Host, config.Port))
-	if err != nil {
-		return nil, err
-	}
-
-	agent, err := agent.New(agent.Config{
-		Identity: agentID,
-		ClientConfig: &agent.ClientConfig{
-			Host: ic0,
-		}})
-	if err != nil {
-		return nil, err
-	}
-
-	return agent, nil
 }
 
 // startWatching starts the dispute watcher for the specified channel.
@@ -153,7 +56,7 @@ func (c *PaymentClient) startWatching(ch *client.Channel) {
 }
 
 // OpenChannel opens a new channel with the specified peer and funding.
-func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) *PaymentChannel {
+func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) { //*PaymentChannel
 	// We define the channel participants. The proposer has always index 0. Here
 	// we use the on-chain addresses as off-chain addresses, but we could also
 	// use different ones.
@@ -165,8 +68,8 @@ func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) *PaymentC
 	// We create an initial allocation which defines the starting balances.
 	initBal := big.NewInt(int64(amount))
 
-	initAlloc := channel.NewAllocation(2, icchannel.Asset)
-	initAlloc.SetAssetBalances(icchannel.Asset, []channel.Bal{
+	initAlloc := pchannel.NewAllocation(2, channel.Asset)
+	initAlloc.SetAssetBalances(channel.Asset, []pchannel.Bal{
 		initBal, // Our initial balance.
 		initBal, // Peer's initial balance.
 	})
@@ -191,15 +94,47 @@ func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) *PaymentC
 
 	// Start the on-chain event watcher. It automatically handles disputes.
 	c.startWatching(ch)
+	c.Channel = newPaymentChannel(ch, c.currency)
 
-	fmt.Println("New channel: ", ch)
-	fmt.Println("Channel Params/State: ", ch.Params(), ch.State())
-
-	return newPaymentChannel(ch, c.currency)
 }
 
 // WireAddress returns the wire address of the client.
 func (c *PaymentClient) WireAddress() *icwire.Address {
 	waddr := icwallet.AsAddr(c.account)
 	return &icwire.Address{Address: waddr}
+}
+
+// AcceptedChannel returns the next accepted channel.
+func (c *PaymentClient) AcceptedChannel() { //*PaymentChannel
+	c.Channel = <-c.channels
+}
+
+// Shutdown gracefully shuts down the client.
+func (c *PaymentClient) Shutdown() {
+	c.perunClient.Close()
+}
+
+func (c *PaymentClient) GetChannelBalance() *big.Int {
+	chanParams := c.Channel.GetChannelParams()
+	cid := chanParams.ID()
+	addr := chanParams.Parts[c.Channel.ch.Idx()]
+	addrBytes, err := addr.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+
+	queryBalArgs := icperun.Funding{
+		Channel:     cid,
+		Participant: addrBytes,
+	}
+	balNat, err := c.dfxConn.PerunAgent.QueryHoldings(queryBalArgs)
+	if err != nil {
+		panic(err)
+	}
+
+	if (*balNat) == nil {
+		return big.NewInt(0)
+	}
+
+	return (*balNat).BigInt()
 }

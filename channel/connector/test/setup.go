@@ -19,7 +19,7 @@ type PerunSetup struct {
 
 func NewPerunSetup(t *testing.T) *PerunSetup {
 
-	s := chtest.NewMinterSetup(t)
+	s := chtest.NewTransferSetup(t)
 	c := s.Conns
 
 	ret := &PerunSetup{Setup: s}

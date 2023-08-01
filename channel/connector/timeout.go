@@ -30,7 +30,7 @@ type (
 )
 
 // DefaultTimeoutPollInterval default value for the PollInterval of a Timeout.
-const DefaultTimeoutPollInterval = time.Second
+const DefaultTimeoutPollInterval = 1 * time.Second
 
 // NewExpiredTimeout returns a new ExpiredTimeout.
 func NewExpiredTimeout() *ExpiredTimeout {

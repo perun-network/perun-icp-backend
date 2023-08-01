@@ -27,7 +27,7 @@ func TestDFXEnvironment(t *testing.T) {
 	require.NoError(t, err, "Failed to start and deploy DFX environment")
 	assert.NotNil(t, testSetup.DfxCmd, "DFX cmd should not be nil")
 
-	// Stop DFX
-	// err = testSetup.StopDFX()
-	// assert.NoError(t, err, "Failed to stop DFX environment")
+	//Stop DFX
+	err = testSetup.StopDFX()
+	assert.NoError(t, err, "Failed to stop DFX environment")
 }

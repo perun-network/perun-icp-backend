@@ -6,18 +6,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 	pwallet "perun.network/go-perun/wallet"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
-	utils "perun.network/perun-icp-backend/utils"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 	"perun.network/perun-icp-backend/wallet"
-
-	"sync"
 
 	"time"
 )
+
+const DefaultMaxIters = 3
+const DefaultPollInterval = 2 * time.Second
 
 type DepositReq struct {
 	Balance pchannel.Bal
@@ -32,51 +34,125 @@ type Funder struct {
 	conn *chanconn.Connector
 }
 
+type FundingEventSub struct {
+	agent        *icperun.Agent
+	address      wallet.Address
+	idx          pchannel.Index
+	chanId       [32]byte
+	timestamp    uint64
+	queryArgs    icperun.ChannelTime
+	fundingReq   pchannel.FundingReq
+	pollInterval time.Duration
+	maxIters     int
+}
+
+func NewFundingEventSub(addr wallet.Address, starttime uint64, req pchannel.FundingReq, conn *chanconn.Connector) (*FundingEventSub, error) {
+	userIdx := req.Idx
+	a := conn.PerunAgent
+	cid := req.Params.ID()
+
+	queryArgs := icperun.ChannelTime{
+		Channel:   cid,
+		Timestamp: starttime,
+	}
+
+	return &FundingEventSub{
+		fundingReq:   req,
+		agent:        a,
+		address:      addr,
+		idx:          userIdx,
+		chanId:       cid,
+		timestamp:    starttime,
+		queryArgs:    queryArgs,
+		pollInterval: DefaultPollInterval,
+		maxIters:     DefaultMaxIters,
+	}, nil
+}
+
 func (f *Funder) GetAcc() *wallet.Account {
 	return f.acc
 }
 
-func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
+func (f *FundingEventSub) QueryEvents() (string, error) {
+	return f.agent.QueryEvents(f.queryArgs)
+}
+
+func (f *FundingEventSub) QueryFundingState(ctx context.Context) error {
+
+	funderAddr := f.address
+	funderIdx := f.idx
+	fundingReq := f.fundingReq
+	fundingReqAlloc := fundingReq.Agreement[0][funderIdx].Uint64()
+	fundedTotal := uint64(0)
+
+polling:
+	for i := 0; i < f.maxIters; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(f.pollInterval):
+			eventStr, err := f.QueryEvents()
+			if err != nil {
+				continue polling
+			}
+
+			parsedEvents, err := parseEvents(eventStr)
+			if err != nil {
+				return errors.Wrap(err, "failed to sort events")
+			}
+
+			funded, err := EvaluateFundedEvents(parsedEvents, funderAddr, fundingReqAlloc, fundedTotal)
+			if err != nil {
+				return errors.Wrap(err, "failed to evaluate events")
+			}
+			if funded {
+				return nil
+			}
+		}
+	}
+	return ErrNotFundedInTime
+}
+
+func (d *Depositor) TransferToPerun(req *DepositReq) (chanconn.BlockNum, error) {
+
+	transferArgs, err := d.cnr.BuildTransfer(*d.cnr.L1Account, req.Balance, req.Fee, req.Funding, *d.cnr.PerunID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to build transfer: %w", err)
+	}
+	d.cnr.Mutex.Lock()
+	blockNum, err := d.cnr.TransferDfxAG(transferArgs)
+	d.cnr.Mutex.Unlock()
+
+	if blockNum.Ok == nil {
+		return 0, fmt.Errorf("blockNum is nil")
+	}
+
+	return chanconn.BlockNum(*blockNum.Ok), err
+}
+
+func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error { //, cid [32]byte
 
 	// Transfer DFX to the Perun canister with a unique memo.
 
-	transferArgs, err := d.cnr.BuildTransfer(*d.cnr.L1Account, req.Balance, req.Fee, req.Funding, *d.cnr.PerunID)
-
-	if err != nil {
-		return fmt.Errorf("failed to build transfer: %w", err)
-	}
-	blockNum, err := d.cnr.TransferDfxAG(transferArgs)
-
-	// depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to build deposit: %w", err)
-	// }
-	//a *icpledger.Agent, txArgs icpledger.TransferArgs, canID principal.Principal
-	//blockNum, err := d.cnr.TransferDfxAG(depositArgs)
-
-	blnm := blockNum.Ok
-	if blnm == nil {
-		panic("blockNum is nil")
-	}
-	fmt.Println("blockNum no error", blnm)
-
+	blnm, err := d.TransferToPerun(req)
 	if err != nil {
 		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
 	}
 
-	_, err = d.cnr.NotifyTransferToPerun(chanconn.BlockNum(*blnm), *d.cnr.PerunID, d.cnr.ExecPath)
+	retntf, err := d.cnr.NotifyTransferToPerun(blnm, *d.cnr.PerunID)
+	//retntf, err := d.cnr.NotifyTransferToPerun(chanconn.BlockNum(*blnm), *d.cnr.PerunID)
+
+	fmt.Println("retntf", retntf)
 
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
 
-	addr := req.Account.ICPAddress()
-	memo, err := req.Funding.Memo()
-	if err != nil {
-		return fmt.Errorf("failed to get memo from funding: %w", err)
-	}
+	fmt.Println("after notify transfer to perun")
 
-	_, err = d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *d.cnr.PerunID, d.cnr.ExecPath)
+	addr := req.Account.L2Address()
+
+	err = d.cnr.DepositToPerunChannel(addr, req.Funding.Channel)
 	if err != nil {
 		return fmt.Errorf("failed to deposit to perun channel: %w", err)
 	}
@@ -84,167 +160,59 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error {
 	return nil
 }
 
-// func (d *Depositor) DepositOld(ctx context.Context, req *DepositReq) error {
-
-// 	depositArgs, err := d.cnr.BuildDeposit(req.Account, req.Balance, req.Fee, req.Funding)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to build deposit: %w", err)
-// 	}
-
-// 	blockNum, err := d.cnr.ExecuteDFXTransfer(depositArgs, *d.cnr.LedgerID, d.cnr.ExecPath, d.cnr.TransferDfx)
-
-// 	if err != nil {
-// 		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
-// 	}
-
-// 	_, err = d.cnr.NotifyTransferToPerun(blockNum, *d.cnr.PerunID, d.cnr.ExecPath)
-
-// 	if err != nil {
-// 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
-// 	}
-
-// 	addr := req.Account.ICPAddress()
-// 	memo, err := req.Funding.Memo()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to get memo from funding: %w", err)
-// 	}
-
-// 	_, err = d.cnr.DepositToPerunChannel(addr, req.Funding.Channel, memo, *d.cnr.PerunID, d.cnr.ExecPath)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to deposit to perun channel: %w", err)
-// 	}
-
-// 	return nil
-// }
-
-func (f *Funder) FundAG(ctx context.Context, req pchannel.FundingReq) error {
-
-	// timestamp the funding procedure
-	tstamp := time.Now().UnixNano()
-
-	wReq, err := NewDepositReqFromPerun(&req, f.acc)
-
-	if err != nil {
-		return err
-	}
-	if err := NewDepositor(f.conn).Deposit(ctx, wReq); err != nil {
-		return err
-	}
-
-	chanID := wReq.Funding.Channel
-
-	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
-
-	eventsString, err := f.conn.QueryEventsCLI(qEventsvArgs, *f.conn.PerunID, f.conn.ExecPath)
-	if err != nil {
-		return fmt.Errorf("Error for parsing channel events: %v", err)
-	}
-
-	eventList, err := chanconn.StringIntoEvents(eventsString)
-	if err != nil {
-		return fmt.Errorf("Error for parsing channel events: %v", err)
-	}
-
-	evli := make(chan chanconn.Event, 1)
-
-	go func() {
-		for _, event := range eventList {
-			evli <- event
-		}
-	}()
-
-	return nil
-}
-
-type FunderWithMutex struct {
-	Funder *Funder
-	Mutex  *sync.Mutex
-}
-
-func (fm *FunderWithMutex) Fund(ctx context.Context, req pchannel.FundingReq) error {
-	fm.Mutex.Lock()
-
-	defer fm.Mutex.Unlock()
-
-	return fm.Funder.Fund(ctx, req)
-}
-
 func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 
-	return fundLocked(ctx, req, f.acc, f.conn)
-}
+	acc := f.acc
+	conn := f.conn
+	addr := acc.L2Address()
 
-func fundLocked(ctx context.Context, req pchannel.FundingReq, acc pwallet.Account, conn *chanconn.Connector) error {
-	tstamp := time.Now().UnixNano()
-
+	tstamp := uint64(0) //time.Now().UnixNano()
 	wReq, err := NewDepositReqFromPerun(&req, acc)
 	if err != nil {
 		return err
 	}
 
-	//transactor principal.Principal, memo uint64, _amount, _fee *big.Int, receiver principal.Principal, funding Funding
-	// transferArgs, err := conn.BuildTransfer(*conn.L1Account, wReq.Balance, wReq.Fee, wReq.Funding, *conn.PerunID)
-
-	// if err != nil {
-	// 	return fmt.Errorf("failed to build transfer: %w", err)
-	// }
-	// ledgerAgent := conn.L1Ledger
-	// blockNum, err := conn.TransferDfxAG(ledgerAgent, transferArgs)
-
-	//fmt.Println("blockNum", blockNum)
-
 	if err := NewDepositor(conn).Deposit(ctx, wReq); err != nil {
 		return err
 	}
 
-	chanID := wReq.Funding.Channel
-
-	qEventsvArgs := utils.FormatChanTimeArgs([]byte(chanID[:]), uint64(tstamp))
-
-	eventsString, err := conn.QueryEventsCLI(qEventsvArgs, *conn.PerunID, conn.ExecPath)
+	evSub, err := NewFundingEventSub(addr, tstamp, req, conn)
 	if err != nil {
-		return fmt.Errorf("Error for parsing channel events: %v", err)
+		return fmt.Errorf("failed to create event subscription: %w", err)
 	}
 
-	eventList, err := chanconn.StringIntoEvents(eventsString)
+	// Create a context with a timeout.
+	ctxFund, cancel := context.WithTimeout(context.Background(), time.Duration(req.Params.ChallengeDuration)*time.Second)
+	defer cancel()
+
+	err = evSub.QueryFundingState(ctxFund)
 	if err != nil {
-		return fmt.Errorf("Error for parsing channel events: %v", err)
+		return fmt.Errorf("failed to query funding state: %w", err)
 	}
 
-	evli := make(chan chanconn.Event, 1)
+	if err != nil {
+		return fmt.Errorf("failed to query events: %w", err)
+	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
-		for _, event := range eventList {
-			evli <- event
-		}
-	}()
-
-	// Wait for the NotifyTransferToPerun operation to complete.
-	wg.Wait()
 	return nil
 }
 
-func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, req pchannel.FundingReq) error {
-	fundingEventCount := 0
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case event := <-evLi: //src.Events():
-			if event.EventType == "Funded" {
-				fundingEventCount++
-				if fundingEventCount == 1 {
-					return nil
-				}
-			}
-		}
-	}
-}
+// func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, req pchannel.FundingReq) error {
+// 	fundingEventCount := 0
+// 	for {
+// 		select {
+// 		case <-ctx.Done():
+// 			return ctx.Err()
+// 		case event := <-evLi: //src.Events():
+// 			if event.EventType == "Funded" {
+// 				fundingEventCount++
+// 				if fundingEventCount == 1 {
+// 					return nil
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 func NewFunder(acc wallet.Account, c *chanconn.Connector) *Funder {
 	return &Funder{
@@ -256,13 +224,13 @@ func NewFunder(acc wallet.Account, c *chanconn.Connector) *Funder {
 
 func NewDepositReqFromPerun(req *pchannel.FundingReq, acc pwallet.Account) (*DepositReq, error) {
 	if !req.Agreement.Equal(req.State.Balances) && (len(req.Agreement) == 1) {
-		return nil, chanconn.ErrFundingReqIncompatible
+		return nil, ErrFundingReqIncompatible
 	}
 	bal := req.Agreement[0][req.Idx]
 	fee := big.NewInt(chanconn.DfxTransferFee)
 	fReq, err := MakeFundingReq(req)
 	if err != nil {
-		return nil, errors.WithMessage(chanconn.ErrFundingReqIncompatible, err.Error())
+		return nil, errors.WithMessage(ErrFundingReqIncompatible, err.Error())
 	}
 	convAcc := *acc.(*wallet.Account)
 	return NewDepositReq(bal, fee, convAcc, fReq), err
@@ -286,24 +254,7 @@ func NewDepositor(cnr *chanconn.Connector) *Depositor {
 	return &Depositor{log.MakeEmbedding(log.Default()), cnr}
 }
 
-func (d *Depositor) VerifySig(nonce chanconn.Nonce, parts []pwallet.Address, chDur uint64, chanId chanconn.ChannelID, vers chanconn.Version, alloc *pchannel.Allocation, finalized bool, sigs []pwallet.Sig) (string, error) {
-
-	execPath := d.cnr.ExecPath
-	canID := d.cnr.PerunID
-	verifyResult, err := d.cnr.VerifySig(nonce, parts, chDur, chanId, vers, alloc, finalized, sigs, *canID, execPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to build deposit: %w", err)
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("failed to get memo from funding: %w", err)
-	}
-
-	return verifyResult, nil
-}
-
 type Depositor struct {
 	log.Embedding
-
 	cnr *chanconn.Connector
 }

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"math/big"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 )
@@ -21,10 +22,6 @@ func (c *PaymentChannel) GetChannelParams() *channel.Params {
 }
 
 func (c *PaymentChannel) GetChannelState() *channel.State {
-	return c.ch.State()
-}
-
-func (c *PaymentChannel) GetChannelAlloc() *channel.State {
 	return c.ch.State()
 }
 
@@ -53,7 +50,8 @@ func (c PaymentChannel) SendPayment(amount int64) {
 
 // Settle settles the payment channel and withdraws the funds.
 func (c PaymentChannel) Settle() {
-	// Finalize the channel to enable fast settlement.
+	// If the channel is not finalized: Finalize the channel to enable fast settlement.
+
 	if !c.ch.State().IsFinal {
 		err := c.ch.Update(context.TODO(), func(state *channel.State) {
 			state.IsFinal = true

@@ -20,7 +20,7 @@ func (a Account) Address() wallet.Address {
 	return &addr
 }
 
-func (a Account) ICPAddress() Address {
+func (a Account) L2Address() Address {
 	addr := Address(ed.PrivateKey(a).Public().(ed.PublicKey))
 	return addr
 }

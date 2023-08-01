@@ -46,7 +46,8 @@ func NewRAMWallet(gen io.Reader) (*FsWallet, error) {
 
 	_, err := io.ReadFull(gen, w.seed[:])
 	if err != nil {
-		return nil, fmt.Errorf("error reading random seed: %v", err)
+		//return nil, fmt.Errorf("error reading random seed: %v", err)
+		panic(err)
 	}
 
 	return &w, nil
@@ -125,12 +126,12 @@ func (w *FsWallet) save() error {
 
 	err := binary.Write(file, bo, w.latestAcc)
 	if err != nil {
-		return fmt.Errorf("error writing latestAcc: %v", err)
+		panic(err)
 	}
 
 	err = binary.Write(file, bo, uint32(len(w.openAccs)))
 	if err != nil {
-		return fmt.Errorf("error writing openAccs length: %v", err)
+		panic(err)
 	}
 
 	for pk, acc := range w.openAccs {
@@ -138,12 +139,12 @@ func (w *FsWallet) save() error {
 
 		err = binary.Write(file, bo, acc.nonce)
 		if err != nil {
-			return fmt.Errorf("error writing nonce for account %s: %v", pk, err)
+			panic(err)
 		}
 
 		err = binary.Write(file, bo, acc.useCount)
 		if err != nil {
-			return fmt.Errorf("error writing useCount for account %s: %v", pk, err)
+			panic(err)
 		}
 	}
 
@@ -236,13 +237,12 @@ func (w *FsWallet) IncrementUsage(a wallet.Address) {
 	defer w.mutex.Unlock()
 	acc, ok := w.openAccs[string(*a.(*Address))]
 	if !ok {
-		fmt.Printf("IncrementUsage: account not found")
-		return
+		panic("IncrementUsage: account not found")
 	}
 	acc.useCount++
 
 	if err := w.save(); err != nil {
-		fmt.Printf("Error in IncrementUsage during save: %v", err)
+		panic("Error in IncrementUsage during save")
 	}
 }
 
@@ -253,12 +253,10 @@ func (w *FsWallet) DecrementUsage(a wallet.Address) {
 	key := string(*a.(*Address))
 	acc, ok := w.openAccs[key]
 	if !ok {
-		fmt.Printf("IncrementUsage: account not found!")
-		return
+		panic("IncrementUsage: account not found!")
 	}
 	if acc.useCount == 0 {
-		fmt.Printf("DecrementUsage: unused account!")
-		return
+		panic("DecrementUsage: unused account!")
 	}
 	acc.useCount--
 	if acc.useCount == 0 {
@@ -267,6 +265,6 @@ func (w *FsWallet) DecrementUsage(a wallet.Address) {
 	}
 
 	if err := w.save(); err != nil {
-		fmt.Printf("Error in DecrementUsage during save: %v", err)
+		panic("Error in DecrementUsage during save")
 	}
 }

@@ -54,8 +54,8 @@ func FormatGetBalanceArgs(sendTo string) string {
 	return fmt.Sprintf("(record{ account = \"%s\"})", sendTo)
 }
 
-func FormatFundingArgs(addr, chanId []byte) string {
-	return fmt.Sprintf("( record { channel = blob \"%s\"; participant = %s } )", FormatHexByte(chanId), FormatVec(addr))
+func FormatFundingArgs(chanId, addr []byte) string {
+	return fmt.Sprintf("( record { channel = blob \"%s\"; participant = blob \"%s\"} )", FormatHexByte(chanId), FormatHexByte(addr))
 }
 func FormatFidArgs(addr, chanId []byte) string {
 	return fmt.Sprintf("(record {channel = %s; participant = %s})", FormatVec(chanId), FormatVec(addr))
@@ -86,13 +86,13 @@ func FormatConcludeAGArgs(nonce []byte, addrs [][]byte, chDur uint64, chanId []b
 		FormatHexByte(nonce), FormatHexByte(addrs[0]), FormatHexByte(addrs[1]), chDur, FormatHexByte(chanId), version, alloc[0], alloc[1], finalized, FormatHexByte(sig[0]), FormatHexByte(sig[1]))
 }
 
-func FormatFundingMemoArgs(addr, chanId []byte, memo uint64) string {
+func FormatFundingMemoArgs(chanId, addr []byte, memo uint64) string {
 	var builder strings.Builder
 
 	builder.WriteString(fmt.Sprintf(
-		"(record {channel = blob \"%s\"; participant = %s; memo = %d : nat64 })",
+		"(record {channel = blob \"%s\"; participant = blob \"%s\"; memo = %d : nat64 })",
 		FormatHexByte(chanId),
-		FormatVec(addr),
+		FormatHexByte(addr),
 		memo,
 	))
 

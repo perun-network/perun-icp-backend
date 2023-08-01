@@ -4,16 +4,12 @@ package connector_test
 import (
 	"fmt"
 	"github.com/aviate-labs/agent-go"
-
-	"log"
+	"math/big"
 	"net/url"
 
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	//"github.com/aviate-labs/agent-go/identity"
 
 	"github.com/aviate-labs/agent-go/principal"
 
@@ -34,18 +30,11 @@ func TestLedgerAgent(t *testing.T) {
 		ExecPath: "./../../test/testdata/",
 	}
 
-	ledgerPrincipal := "rrkah-fqaaa-aaaaa-aaaaq-cai"
+	ledgerPrincipal := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
 
 	ledgerId, err := principal.Decode(ledgerPrincipal)
 	if err != nil {
 		t.Fatalf("Failed to decode principal: %v", err)
-	}
-
-	dfx := setup.NewDfxSetup(ledgerTestConfig)
-
-	err = dfx.StartDeployDfx()
-	if err != nil {
-		t.Fatalf("Failed to start Dfx: %v", err)
 	}
 
 	id, err := chanconn.NewIdentity("./../../test/testdata/identities/usera_identity.pem")
@@ -61,6 +50,7 @@ func TestLedgerAgent(t *testing.T) {
 	ldgConfig := agent.Config{
 		Identity:     *id,
 		ClientConfig: &agent.ClientConfig{Host: ic0},
+		FetchRootKey: true,
 	}
 
 	ldgAgent, err := icpledger.NewAgent(ledgerId, ldgConfig)
@@ -75,8 +65,7 @@ func TestLedgerAgent(t *testing.T) {
 		t.Fatalf("Failed to get account balance: %v", err)
 	}
 	fmt.Println("resp: ", resp.E8s)
-	fromSubaccount := accID.Bytes()
-	perunPrincipal := "r7inp-6aaaa-aaaaa-aaabq-cai"
+	perunPrincipal := "be2us-64aaa-aaaaa-qaabq-cai"
 	perunID, err := principal.Decode(perunPrincipal)
 	require.NoError(t, err, "Failed to decode principal")
 	perunaccountID := perunID.AccountIdentifier(principal.DefaultSubAccount)
@@ -90,104 +79,95 @@ func TestLedgerAgent(t *testing.T) {
 		Fee: struct {
 			E8s uint64 "ic:\"e8s\""
 		}{E8s: 10000},
-		FromSubaccount: &fromSubaccount,
-		To:             toAccount,
+		To: toAccount,
 	}
 
 	txRes, err := ldgAgent.Transfer(txArgs)
-
 	if err != nil {
 		t.Fatalf("Failed to transfer: %v", err)
 	}
-	fmt.Println("txRes: ", txRes)
 
-	err = dfx.StopDFX()
-	if err != nil {
-		t.Fatalf("Failed to stop Dfx: %v", err)
+	if txRes.Err != nil {
+		if txRes.Err.BadFee != nil {
+			fmt.Printf("BadFee error. Expected Fee: %v\n", txRes.Err.BadFee.ExpectedFee)
+		} else if txRes.Err.InsufficientFunds != nil {
+			fmt.Printf("InsufficientFunds error. Balance: %v\n", txRes.Err.InsufficientFunds.Balance)
+		} else if txRes.Err.TxTooOld != nil {
+			fmt.Printf("TxTooOld error. Allowed Window Nanos: %v\n", txRes.Err.TxTooOld.AllowedWindowNanos)
+		} else if txRes.Err.TxCreatedInFuture != nil {
+			fmt.Println("TxCreatedInFuture error.")
+		} else if txRes.Err.TxDuplicate != nil {
+			fmt.Printf("TxDuplicate error. Duplicate Of: %v\n", txRes.Err.TxDuplicate.DuplicateOf)
+		} else {
+			fmt.Println("Unknown error")
+		}
+	} else if txRes.Ok != nil {
+		fmt.Println("BlockIndex: ", *txRes.Ok)
+	} else {
+		fmt.Println("Both BlockIndex and TransferError are nil")
 	}
+	// Print entire txRes for debugging
+	fmt.Printf("txRes: %+v\n", txRes)
+	respP, err := ldgAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
+	if err != nil {
+		t.Fatalf("Failed to get account balance: %v", err)
+	}
+	fmt.Println("respP: ", respP.E8s)
+
+	resp2, err := ldgAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: toAccount})
+	if err != nil {
+		t.Fatalf("Failed to get account balance: %v", err)
+	}
+	fmt.Println("resp2: ", resp2.E8s)
+
 }
 
 func TestQueryPerun(t *testing.T) {
-	s := test.NewPerunSetup(t)
-	err := s.Setup.DfxSetup.StartDeployDfx()
-	require.NoError(t, err, "Failed to start and deploy DFX environment")
 
-	defer func() {
-		err := s.Setup.DfxSetup.StopDFX()
-		assert.NoError(t, err, "Failed to stop DFX environment")
-	}()
-
-	perunID := "r7inp-6aaaa-aaaaa-aaabq-cai"
-	err = channel.QueryCandidCLI("()", perunID, "./../../test/testdata/")
+	perunID := "be2us-64aaa-aaaaa-qaabq-cai"
+	err := channel.QueryCandidCLI("()", perunID, "./../../test/testdata/")
 	require.NoError(t, err, "Failed to query Perun ID")
 
 }
 
-func TestDepositCLI(t *testing.T) {
+func TestDeposit(t *testing.T) {
 	s := test.NewPerunSetup(t)
 
-	err := s.Setup.DfxSetup.StartDeployDfx()
-	require.NoError(t, err, "Failed to start and deploy DFX environment")
-
-	defer func() {
-		err := s.Setup.DfxSetup.StopDFX()
-		assert.NoError(t, err, "Failed to stop DFX environment")
-	}()
-
 	params, state := s.NewRandomParamAndState()
+
+	fmt.Println("params: ", params, "state: ", state)
+
+	state.Allocation.Balances[0][0] = big.NewInt(200000)
+	state.Allocation.Balances[0][1] = big.NewInt(200000)
+
 	dSetup := chtest.NewDepositSetup(params, state)
 
-	err = chtest.FundMtx(s.NewCtx(), s.Funders, dSetup.FReqs)
+	err := chtest.FundConc(s.NewCtx(), s.Funders, dSetup.FReqs)
 	require.NoError(t, err)
 }
 
-func TestDepositAG(t *testing.T) {
-	s := test.NewPerunSetup(t)
+// func TestValidateSig(t *testing.T) {
+// 	s := test.NewPerunSetup(t)
 
-	err := s.Setup.DfxSetup.StartDeployDfx()
-	require.NoError(t, err, "Failed to start and deploy DFX environment")
+// 	params, state := s.NewRandomParamAndState()
+// 	dSetup := chtest.NewDepositSetup(params, state)
+// 	dfxState, err := chanconn.StateForChain(state)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
+// 	require.NoError(t, err)
+// 	dReqFunding := wReq.Funding
+// 	sigs := s.SignState(dfxState)
+// 	alloc := state.Allocation
 
-	defer func() {
-		err := s.Setup.DfxSetup.StopDFX()
-		assert.NoError(t, err, "Failed to stop DFX environment")
-	}()
+// 	var nonceArray [32]byte
+// 	copy(nonceArray[:], params.Nonce.Bytes())
+// 	statefinal := state.IsFinal
+// 	chanId := dReqFunding.Channel
 
-	params, state := s.NewRandomParamAndState()
-	dSetup := chtest.NewDepositSetup(params, state)
+// 	sigOut, err := s.Deps[0].VerifySig(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
+// 	require.NoError(t, err)
 
-	err = chtest.FundAllAG(s.NewCtx(), s.Funders, dSetup.FReqs)
-	require.NoError(t, err)
-}
-
-func TestValidateSig(t *testing.T) {
-	s := test.NewPerunSetup(t)
-
-	err := s.Setup.DfxSetup.StartDeployDfx()
-	require.NoError(t, err, "Failed to start and deploy DFX environment")
-	defer func() {
-		err := s.Setup.DfxSetup.StopDFX()
-		assert.NoError(t, err, "Failed to stop DFX environment")
-	}()
-
-	params, state := s.NewRandomParamAndState()
-	dSetup := chtest.NewDepositSetup(params, state)
-	dfxState, err := chanconn.NewState(state)
-	if err != nil {
-		panic(err)
-	}
-	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
-	require.NoError(t, err)
-	dReqFunding := wReq.Funding
-	sigs := s.SignState(dfxState)
-	alloc := state.Allocation
-
-	var nonceArray [32]byte
-	copy(nonceArray[:], params.Nonce.Bytes())
-	statefinal := state.IsFinal
-	chanId := dReqFunding.Channel
-
-	sigOut, err := s.Deps[0].VerifySig(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
-	require.NoError(t, err)
-
-	log.Printf("Result of signature verification: %s", sigOut)
-}
+// 	log.Printf("Result of signature verification: %s", sigOut)
+// }

@@ -33,6 +33,14 @@ type Dfx struct {
 	ExecPath string
 }
 
+func GiveExecPath() (string, error) {
+	path, err := exec.LookPath("dfx")
+	if err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
 func (d *Dfx) StartDeployDfx(config DfxConfig) (*exec.Cmd, error) {
 	err := d.checkDFXInstallation()
 	if err != nil {
@@ -123,7 +131,7 @@ func createLedgerArg() string {
 	)
 
 	return fmt.Sprintf(
-		"(record {minting_account = \"%s\"; initial_values = vec { record { \"%s\"; record { e8s=100_000_000 } }; record { \"%s\"; record { e8s=100_000_000 } }}; send_whitelist = vec {}})",
+		"(record {minting_account = \"%s\"; initial_values = vec { record { \"%s\"; record { e8s=18_446_744} }; record { \"%s\"; record { e8s=18_446_744 } }}; send_whitelist = vec {}})",
 		ICP_PERUN_MINT_ACC, ICP_PERUN_USERA_ACC, ICP_PERUN_USERB_ACC,
 	)
 }

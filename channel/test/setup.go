@@ -9,13 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"math"
 	"math/rand"
-	"path/filepath"
 
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	"perun.network/perun-icp-backend/channel"
-	"perun.network/perun-icp-backend/client"
-	"sync"
 
 	"perun.network/perun-icp-backend/setup"
 	"perun.network/perun-icp-backend/utils"
@@ -34,10 +31,10 @@ const BlockTime = 0.04
 
 var DefaultTestTimeout = 20
 
-type FundingListParams struct {
-	Users             []*client.PerunUser
-	ChallengeDuration uint64
-}
+// type FundingListParams struct {
+// 	Users             []*client.DfxConnector
+// 	ChallengeDuration uint64
+// }
 
 func NewRandL2Account() (wallet.Account, error) {
 	wlt, err := wallet.NewRAMWallet(cr.Reader)
@@ -49,38 +46,53 @@ func NewRandL2Account() (wallet.Account, error) {
 	return acc, nil
 }
 
-func NewMinterSetup(t *testing.T) *Setup {
-
+func NewTransferSetup(t *testing.T) *Setup {
 	testConfig := setup.DfxConfig{
-		Host:        "http://127.0.0.1",
-		Port:        4943,
-		ExecPath:    "./../../test/testdata/", //"../test/testdata/",
-		AccountPath: filepath.Join(utils.SetHomeDir(), ".config", "dfx", "identity", "minter", "identity.pem"),
+		Host: "http://127.0.0.1",
+		Port: 4943,
 	}
 
-	perunID := "r7inp-6aaaa-aaaaa-aaabq-cai"
-	ledgerID := "rrkah-fqaaa-aaaaa-aaaaq-cai"
+	aliceAccPath := "./../../test/testdata/identities/usera_identity.pem"
+	bobAccPath := "./../../test/testdata/identities/userb_identity.pem"
+	//minterAccPath := "./../test/testdata/identities/minter_identity.pem"
 
-	dfx := setup.NewDfxSetup(testConfig)
-	acc1, err := NewRandL2Account()
+	aliceL1Acc, err := chanconn.NewIdentity(aliceAccPath)
+	if err != nil {
+		panic(err)
+	}
+	bobL1Acc, err := chanconn.NewIdentity(bobAccPath)
+	if err != nil {
+		panic(err)
+	}
+
+	aliceL2Acc, err := NewRandL2Account()
 	if err != nil {
 		t.Fatal("Error generating random account 1:", err)
 	}
-	acc2, err := NewRandL2Account()
+	bobL2Acc, err := NewRandL2Account()
 	if err != nil {
 		t.Fatal("Error generating random account 2:", err)
 	}
-	accs := []wallet.Account{acc1, acc2}
-	newMutex := &sync.Mutex{}
-	conn1 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.Host, testConfig.Port)
-	conn2 := chanconn.NewConnector(perunID, ledgerID, testConfig.AccountPath, testConfig.Host, testConfig.Port)
+	accs := []wallet.Account{aliceL2Acc, bobL2Acc}
+	alicePrince := (*aliceL1Acc).Sender()
+	bobPrince := (*bobL1Acc).Sender()
+	//minterPrince := (*minterAcc).Sender()
 
-	conn1.Mutex = newMutex
-	conn2.Mutex = newMutex
+	perunID := "be2us-64aaa-aaaaa-qaabq-cai"
+	ledgerID := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+
+	// perunPrince, err := principal.Decode(perunID)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	accsL1 := []*principal.Principal{&alicePrince, &bobPrince}
+	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, testConfig.Host, testConfig.Port)
+	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, testConfig.Host, testConfig.Port)
+	//connPerun := chanconn.NewConnector(perunID, ledgerID, minterAccPath, testConfig.Host, testConfig.Port)
 
 	conns := []*chanconn.Connector{conn1, conn2}
-
-	return &Setup{t, pkgtest.Prng(t), accs, accs[0], accs[1], dfx, conns} //, chanConn}
+	return &Setup{t, pkgtest.Prng(t), accs, accs[0], accs[1], accsL1, conns}
 }
 
 type Setup struct {
@@ -89,8 +101,8 @@ type Setup struct {
 
 	Accs       []wallet.Account
 	Alice, Bob wallet.Account
+	L1Accs     []*principal.Principal
 
-	*setup.DfxSetup
 	Conns []*chanconn.Connector
 }
 
