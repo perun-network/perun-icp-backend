@@ -20,7 +20,6 @@ startDFX() {
         return $status
     else
         echo "Starting DFX..."
-        echo $! > ../../dfx_pid.txt  # Save the PID to a file in the repo directory
         return $!
     fi
 }

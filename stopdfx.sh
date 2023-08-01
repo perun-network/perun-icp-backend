@@ -15,8 +15,3 @@ else
     echo "DFX and ICX processes stopped."
 fi
 
-# If a PID file exists, remove it
-if [ -f ./dfx_pid.txt ]; then
-    rm ./dfx_pid.txt
-fi
-

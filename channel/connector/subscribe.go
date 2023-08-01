@@ -45,11 +45,6 @@ func (e *AdjEventSub) GetEvents() <-chan AdjEvent {
 	return e.events
 }
 
-// // Err returns the error channel. Will be closed when the subscription is closed.
-// func (e *EventSource) Err() <-chan error {
-// 	return e.errChan
-// }
-
 func NewAdjudicatorSub(ctx context.Context, cid pchannel.ID, conn *Connector) *AdjEventSub {
 
 	queryArgs := icperun.ChannelTime{
@@ -136,63 +131,8 @@ polling:
 	}
 }
 
-// isAdjEvent returns a predicate that decides whether or not an event is
-// relevant for the adjudicator and concerns a specific channel.
-func isAdjEvent(cid ChannelID) EventPredicate {
-	return func(e PerunEvent) bool {
-		return EventIsDisputed(cid)(e) || EventIsConcluded(cid)(e)
-	}
-}
-
-// Next implements the AdjudicatorSub.Next function.
-// func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
-// 	fmt.Println("inside Next(): ", s, *s)
-// 	if s.closer.IsClosed() {
-// 		return nil
-// 	}
-
-// 	if s.Events() == nil {
-
-// 		return nil
-// 	}
-// 	// Wait for event or closed.
-
-// 	select {
-// 	case event := <-s.Events():
-// 		if event == nil {
-// 			return nil
-// 		}
-
-// 		checkif event is a concluded event or a disputed event
-
-// 		fmt.Println("event in Next()", event)
-// 		timestamp := event.Tstamp()
-
-// 		conclEvent := pchannel.AdjudicatorEventBase{
-// 			VersionV: event.Version(),
-// 			IDV:      event.ID(),
-// 			TimeoutV: MakeTimeout(timestamp),
-// 		}
-
-// 		var ccn *pchannel.ConcludedEvent
-
-// 		ccn = &pchannel.ConcludedEvent{
-// 			AdjudicatorEventBase: conclEvent,
-// 		}
-
-// 		// check type before closing
-
-// 		s.closer.Close()
-// 		return ccn
-
-// 	case <-s.closer.Closed():
-// 		return nil
-// 	}
-// }
-
 // Next implements the AdjudicatorSub.Next function.
 func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
-	fmt.Println("inside Next(): ", s, *s)
 	if s.closer.IsClosed() {
 		return nil
 	}
@@ -212,9 +152,6 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 
 		switch e := event.(type) {
 		case *DisputedEvent:
-			// Handle DisputedEvent here
-			// Here is a dummy example, replace with your actual code
-			fmt.Println("Got a DisputedEvent: ", e)
 
 			dispEvent := pchannel.AdjudicatorEventBase{
 				VersionV: event.Version(),
@@ -227,10 +164,7 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 				Sigs:  nil}
 			s.closer.Close()
 			return ddn
-			// Create and return a ConcludedEvent based on the DisputedEvent if necessary
 		case *ConcludedEvent:
-			// Handle ConcludedEvent here
-			// Here is a dummy example, replace with your actual code
 			fmt.Println("Got a ConcludedEvent: ", e)
 			conclEvent := pchannel.AdjudicatorEventBase{
 				VersionV: event.Version(),
@@ -251,47 +185,9 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 	case <-s.closer.Closed():
 		return nil
 	}
-	//return nil
 }
 
 func (s *AdjEventSub) Close() error {
 	s.cancel()
 	return nil
-}
-
-// makePerunEvent creates a Perun event from a generic event.
-func (s *AdjEventSub) makePerunEvent(event PerunEvent) (pchannel.AdjudicatorEvent, error) {
-
-	// here we check the properties of the event and create the corresponding AdjudicatorEvent
-
-	switch event := event.(type) {
-	case *DisputedEvent:
-
-		duration := 10 * time.Second
-		seconds := uint64(duration.Seconds())
-		return &pchannel.RegisteredEvent{
-			AdjudicatorEventBase: pchannel.AdjudicatorEventBase{
-				IDV:      event.IDV,
-				VersionV: event.State.Version,
-				//TimeoutV: MakeTimeout(event.Timeout),
-				TimeoutV: MakeTimeout(seconds),
-			},
-			State: nil, // only needed for virtual channel support
-			Sigs:  nil, // only needed for virtual channel support
-		}, nil
-
-	case *ConcludedEvent:
-
-		duration := 10 * time.Second
-		seconds := uint64(duration.Seconds())
-		return &pchannel.ConcludedEvent{
-			AdjudicatorEventBase: pchannel.AdjudicatorEventBase{
-				IDV:      event.IDV,
-				VersionV: event.State.Version,
-				TimeoutV: MakeTimeout(seconds),
-			},
-		}, nil
-	default:
-		panic(fmt.Sprintf("unknown event: %#v", event))
-	}
 }

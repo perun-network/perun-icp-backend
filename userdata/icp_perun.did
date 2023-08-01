@@ -12,18 +12,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-//type Error = nat8;
-//type Error = null;
-// type Error = variant {
-//     Authentication : text;
-//     NotFinalized : text;
-//     AlreadyConcluded : text;
-//     InvalidInput : text;
-//     InsufficientFunding : text;
-//     OutdatedState : text;
-//     LedgerError : text;
-// };
-
 type Error = text;
 
 type EventTxt = text;
