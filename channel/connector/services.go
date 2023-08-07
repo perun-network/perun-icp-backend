@@ -87,21 +87,18 @@ func BuildDeposit(addr wallet.Address, cid ChannelID) icperun.Funding {
 func (c *Connector) DepositToPerunChannel(addr wallet.Address, cid ChannelID) error {
 
 	depositArgs := BuildDeposit(addr, cid)
-
 	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
 
-	depoOutput, err := c.PerunAgent.DepositMemo(depositArgs)
+	_, err := c.PerunAgent.Deposit(depositArgs)
 	if err != nil {
 		return fmt.Errorf("error depositing: %v", err)
 	}
 
-	c.Mutex.Unlock()
-	fmt.Println("depoOutput: ", depoOutput)
-
 	return nil
 }
 
-func MakeTransferArgs(memo uint64, amount uint64, fee uint64, recipient string) icpledger.TransferArgs {
+func MakeTransferArgs(memo Memo, amount uint64, fee uint64, recipient string) icpledger.TransferArgs {
 	p, _ := principal.Decode(recipient)
 	subAccount := icpledger.SubAccount(principal.DefaultSubAccount[:])
 
@@ -158,57 +155,20 @@ func (c *Connector) TransferDfxAG(txArgs icpledger.TransferArgs) (*icpledger.Tra
 func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun principal.Principal) (uint64, error) {
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
-	receiptAmount, err := c.notifyDfx(blockNum, recipientPerun)
-	fmt.Println("receiptAmount: ", receiptAmount)
+	receiptAmount, err := c.PerunAgent.TransactionNotification(blockNum)
 	if err != nil {
 		return 0, fmt.Errorf("error notifying transfer to Perun: %v", err)
 	}
+	bnn := **receiptAmount
 
-	fundedValue, err := utils.ExtractTxAmount(receiptAmount)
+	bn := bnn.BigInt()
+	bnint := bn.Uint64()
+
 	if err != nil {
 		return 0, fmt.Errorf("error extracting transaction amount: %v", err)
 	}
 
-	_, err = c.notifyDfx(blockNum, recipientPerun)
-	if err != nil {
-		return 0, fmt.Errorf("error for the (optional) second notification on the funding transfer: %v", err)
-	}
-
-	return uint64(fundedValue), nil
-}
-
-func (c *Connector) notifyDfx(blockNum BlockNum, notifyTo principal.Principal) (string, error) {
-	// Notification of token transfer to the Perun canister
-	formatedNotifyArgs := utils.FormatNotifyArgs(uint64(blockNum))
-	encodedNotifyArgs, err := candid.EncodeValueString(formatedNotifyArgs)
-	if err != nil {
-		return "", fmt.Errorf("failed to encode notification arguments: %w", err)
-	}
-	respNote, err := c.DfxAgent.CallString(notifyTo, "transaction_notification", encodedNotifyArgs)
-	if err != nil {
-		return "", fmt.Errorf("failed to call notify method: %w", err)
-	}
-
-	return respNote, nil
-
-}
-
-func QueryStateCLI(queryStateArgs string, canID string, execPath string) error {
-	// Query the state of the Perun canister
-
-	path, err := exec.LookPath("dfx")
-	if err != nil {
-		return fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
-	}
-
-	txCmd := exec.Command(path, "canister", "call", canID, "query_state", queryStateArgs)
-	txCmd.Dir = execPath
-	output, err := txCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to query the canister state: %w\nOutput: %s", err, output)
-	}
-
-	return nil
+	return bnint, nil
 }
 
 func (c *Connector) BuildDispute(acc pwallet.Account, params *pchannel.Params, state *pchannel.State, sigs []pwallet.Sig) (string, error) {
@@ -291,70 +251,3 @@ func (c *Connector) QueryMemo(memoArg uint64, queryAt principal.Principal) (stri
 	return respQuery, nil
 
 }
-
-// func depositFundMemPerunCLI(depositArgs DepositArgs, cid [64]byte, canID principal.Principal, execPath ExecPath) error {
-
-// 	fmt.Println("depositing amount identified by a memo inside depositFundMemPerunCLI")
-
-// 	addr, err := depositArgs.Participant.MarshalBinary()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to marshal participant address: %w", err)
-// 	}
-// 	//channelIdSlice := []byte(depositArgs.ChannelId[:])
-// 	channelIdSlice := []byte(cid[:])
-// 	formatedQueryFundingMemoArgs := utils.FormatFundingMemoArgs(channelIdSlice, addr, depositArgs.Memo)
-
-// 	fmt.Println("formatedQueryFundingMemoArgs: ", formatedQueryFundingMemoArgs)
-
-// 	path, err := exec.LookPath("dfx")
-
-// 	if err != nil {
-// 		return fmt.Errorf("failed to find 'dfx' executable: %w", err)
-// 	}
-
-// 	canIDString := canID.Encode()
-
-// 	_, err = execCanisterCommand(path, canIDString, "deposit_memo", formatedQueryFundingMemoArgs, execPath)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to deposit amount identified by a memo: %w", err)
-// 	}
-
-// 	return nil
-// }
-
-// func (c *Connector) DepositFundMemPerun(depositArgs DepositArgs, canID principal.Principal) error {
-
-// 	addr, err := depositArgs.Participant.MarshalBinary()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to marshal participant address: %w", err)
-// 	}
-// 	channelIdSlice := []byte(depositArgs.ChannelId[:])
-
-// 	formatedQueryFundingMemoArgs := utils.FormatFundingMemoArgs(channelIdSlice, addr, depositArgs.Memo)
-
-// 	fmt.Println("formatedQueryFundingMemoArgs: ", formatedQueryFundingMemoArgs)
-
-// 	if err != nil {
-// 		return fmt.Errorf("failed to find 'dfx' executable: %w", err)
-// 	}
-
-// 	//canIDString := canID.Encode()
-// 	args, err := candid.EncodeValueString(formatedQueryFundingMemoArgs)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to encode query fid argument: %w", err)
-// 	}
-
-// 	dec, err := candid.DecodeValueString(args)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to decode deposit_memo argument: %w", err)
-// 	}
-// 	fmt.Println("dec: ", dec)
-
-// 	respQuery, err := c.Agent.CallString(canID, "deposit_memo", args)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to call deposit_memo method: %w", err)
-// 	}
-// 	fmt.Println(respQuery)
-
-// 	return nil
-// }

@@ -41,10 +41,6 @@ func parseEvents(input string) ([]FundedEvent, error) {
 	matchesPkeys := rpkeys.FindAllStringSubmatch(input, -1)
 	matchesTotal := rptotal.FindAllStringSubmatch(input, -1)
 	matchesTimestamp := rptimestamp.FindAllStringSubmatch(input, -1)
-	fmt.Printf("Length of matchesPkeys: %d\n", len(matchesPkeys))
-	fmt.Printf("Length of matchesTotal: %d\n", len(matchesTotal))
-	fmt.Printf("Length of matchesTimestamp: %d\n", len(matchesTimestamp))
-	fmt.Println("Matches Total: ", matchesTotal)
 
 	if len(matchesPkeys) != len(matchesTotal) || len(matchesPkeys) != len(matchesTimestamp) {
 		return nil, fmt.Errorf("number of matches for public key, total, and timestamp don't match")
@@ -94,7 +90,6 @@ func SortEvents(eventString string) ([]FundedEvent, error) { //
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Event string: ", parsedEvents)
 	return parsedEvents, nil
 }
 
@@ -107,6 +102,7 @@ func EvaluateFundedEvents(events []FundedEvent, funderAddr wallet.Address, freqA
 	}
 
 	if fundedTotal >= freqAmount {
+
 		return true, nil
 	}
 
@@ -127,7 +123,6 @@ func QueryCandidCLI(queryStateArgs string, canID string, execPath string) error 
 	if err != nil {
 		return fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
 	}
-	fmt.Println("Query Perun canister methods: ", string(output))
 
 	return nil
 }

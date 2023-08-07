@@ -3,227 +3,165 @@
 package connector_test
 
 import (
+	//"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
-	"math"
+	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
+
 	pwallet "perun.network/go-perun/wallet"
-	chanconn "perun.network/perun-icp-backend/channel/connector"
+	"perun.network/perun-icp-backend/channel"
+	"testing"
 
 	"perun.network/perun-icp-backend/channel/connector/test"
+
 	chtest "perun.network/perun-icp-backend/channel/test"
 )
 
-// func TestConcludeDfxCLI(t *testing.T) {
-// 	s := test.NewPerunSetup(t)
+func TestAdjudicator_Register(t *testing.T) {
+	s := test.NewPerunSetup(t)
+	chanAlloc := uint64(50000)
+	userIdx := 0
 
-// 	params, state := s.NewRandomParamAndState()
-// 	dSetup := chtest.NewDepositSetup(params, state)
+	req, params, state := newAdjReq(s, chanAlloc, userIdx, 0, false)
 
-// 	err := chtest.FundAll(context.Background(), s.Funders, dSetup.FReqs)
-// 	require.NoError(t, err)
+	dSetup := chtest.NewDepositSetup(params, state)
 
-// 	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
-// 	require.NoError(t, err)
-// 	dReqFunding := wReq.Funding
+	err := chtest.FundAll(s.NewCtx(), s.Funders, dSetup.FReqs)
+	require.NoError(t, err)
 
-// 	dfxState, err := chanconn.NewState(state)
-// 	sigs := s.SignState(dfxState)
+	// initialize adjudicator as user with index 0
+	adj := channel.NewAdjudicator(s.L2Accs[userIdx], s.DfxConns[userIdx])
 
-// 	require.NoError(t, err)
+	ctx := s.NewCtx()
 
-// 	var nonceArray [32]byte
-// 	copy(nonceArray[:], params.Nonce.Bytes())
-// 	statefinal := state.IsFinal
-// 	alloc := state.Allocation
-// 	chanId := dReqFunding.Channel
-// 	adj := s.Adjs[0]
+	// Channel is not yet registered
+	s.AssertNoRegistered(state.ID)
+	// Register the channel twice. Register should be idempotent.
+	require.NoError(t, adj.Register(ctx, req, nil))
+	// Check on-chain state for the register.
+	require.NoError(t, err)
+	s.AssertRegistered(state.ID)
+}
 
-// 	outpConclude, err := adj.ConcludeDfxCLI(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
-// 	if err != nil {
-// 		log.Fatalf("Failed to conclude via DFX CLI: %v", err)
-// 	}
+func TestAdjudicator_ConcludeFinal(t *testing.T) {
+	s := test.NewPerunSetup(t)
 
-// 	assert.Equal(t, "(opt \"successful concluding the channel\")\n", outpConclude)
+	chanAlloc := uint64(50000)
 
-// 	log.Printf("Concluded channel via DFX CLI: %s", outpConclude)
+	userIdx := 0
 
-// }
+	req, params, state := newAdjReq(s, chanAlloc, userIdx, 0, true)
 
-// func TestConcludeAgentGO(t *testing.T) {
-// 	s := test.NewPerunSetup(t)
+	dSetup := chtest.NewDepositSetup(params, state)
 
-// 	params, state := s.NewRandomParamAndState()
-// 	dSetup := chtest.NewDepositSetup(params, state)
+	err := chtest.FundAll(s.NewCtx(), s.Funders, dSetup.FReqs)
+	require.NoError(t, err)
 
-// 	err := chtest.FundAll(context.Background(), s.Funders, dSetup.FReqs)
-// 	require.NoError(t, err)
-
-// 	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
-// 	require.NoError(t, err)
-// 	dReqFunding := wReq.Funding
-
-// 	dfxState, err := chanconn.StateForChain(state)
-// 	sigs := s.SignState(dfxState)
-
-// 	require.NoError(t, err)
-
-// 	var nonceArray [32]byte
-// 	copy(nonceArray[:], params.Nonce.Bytes())
-// 	statefinal := state.IsFinal
-// 	alloc := state.Allocation
-// 	chanId := dReqFunding.Channel
-// 	adj := s.Adjs[0]
-
-// 	outpConclude, err := adj.ConcludeAgentGo(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
-// 	require.NoError(t, err)
-// 	assert.Equal(t, "(opt \"successful concluding\")\n", outpConclude)
-// }
-
-// func TestConcludeWithdraw(t *testing.T) {
-// 	s := test.NewPerunSetup(t)
-
-// 	params, state := s.NewRandomParamAndState()
-// 	dSetup := chtest.NewDepositSetup(params, state)
-
-// 	err := chtest.FundAll(context.Background(), s.Funders, dSetup.FReqs)
-// 	require.NoError(t, err)
-
-// 	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
-// 	require.NoError(t, err)
-// 	dReqFunding := wReq.Funding
-
-// 	dfxState, err := chanconn.NewState(state)
-// 	sigs := s.SignState(dfxState)
-
-// 	require.NoError(t, err)
-
-// 	var nonceArray [32]byte
-// 	copy(nonceArray[:], params.Nonce.Bytes())
-// 	statefinal := state.IsFinal
-// 	alloc := state.Allocation
-// 	chanId := dReqFunding.Channel
-// 	adj := s.Adjs[0]
-
-// 	outpConclude, err := adj.ConcludeDfxCLI(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
-// 	if err != nil {
-// 		log.Fatalf("Failed to conclude via DFX CLI: %v", err)
-// 	}
-
-// 	assert.Equal(t, "(opt \"successful concluding the channel\")\n", outpConclude)
-// 	log.Printf("Conclusion of channel: %s", outpConclude)
-
-// 	execPathTyped := chanconn.NewExecPath("./../../test/testdata/")
-
-// 	recipPerunID, err := utils.DecodePrincipal("be2us-64aaa-aaaaa-qaabq-cai")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	require.NoError(t, err)
-// 	outpWithdraw, err := chanconn.Withdraw(dReqFunding, sigs[0], *recipPerunID, execPathTyped)
-// 	log.Printf("Withdrawal from channel: %s", outpWithdraw)
-// 	require.NoError(t, err)
-
-// }
-
-// func TestRegisterEvent(t *testing.T) {
-// 	s := test.NewPerunSetup(t)
-
-// 	params, state := s.NewRandomParamAndState()
-// 	dSetup := chtest.NewDepositSetup(params, state)
-
-// 	// here isolate register event canister call somehow and test it
-
-// 	err := chtest.FundAll(context.Background(), s.Funders, dSetup.FReqs)
-// 	require.NoError(t, err)
-
-// 	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
-// 	require.NoError(t, err)
-// 	dReqFunding := wReq.Funding
-
-// 	dfxState, err := chanconn.NewState(state)
-// 	sigs := s.SignState(dfxState)
-
-// 	require.NoError(t, err)
-
-// 	var nonceArray [32]byte
-// 	copy(nonceArray[:], params.Nonce.Bytes())
-// 	statefinal := state.IsFinal
-// 	alloc := state.Allocation
-// 	chanId := dReqFunding.Channel
-// 	adj := s.Adjs[0]
-
-// 	outpDispute, err := adj.DisputeCLI(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
-// 	if err != nil {
-// 		log.Fatalf("Failed to dispute: %v", err)
-// 	}
-// 	assert.Equal(t, "(opt \"successful initialization of a dispute\")\n", outpDispute)
-// 	t.Logf("Dispute response: %s", outpDispute)
-
-// }
-
-// func TestDispute(t *testing.T) {
-// 	s := test.NewPerunSetup(t)
-
-// 	params, state := s.NewRandomParamAndState()
-// 	dSetup := chtest.NewDepositSetup(params, state)
-
-// 	err := chtest.FundAll(context.Background(), s.Funders, dSetup.FReqs)
-// 	require.NoError(t, err)
-
-// 	wReq, err := channel.NewDepositReqFromPerun(dSetup.FReqs[0], s.Funders[0].GetAcc())
-// 	require.NoError(t, err)
-// 	dReqFunding := wReq.Funding
-
-// 	dfxState, err := chanconn.NewState(state)
-// 	sigs := s.SignState(dfxState)
-
-// 	require.NoError(t, err)
-
-// 	var nonceArray [32]byte
-// 	copy(nonceArray[:], params.Nonce.Bytes())
-// 	statefinal := state.IsFinal
-// 	alloc := state.Allocation
-// 	chanId := dReqFunding.Channel
-// 	adj := s.Adjs[0]
-
-// 	outpDispute, err := adj.DisputeCLI(nonceArray, params.Parts, params.ChallengeDuration, chanId, state.Version, &alloc, statefinal, sigs)
-// 	if err != nil {
-// 		log.Fatalf("Failed to dispute: %v", err)
-// 	}
-// 	assert.Equal(t, "(opt \"successful initialization of a dispute\")\n", outpDispute)
-// 	t.Logf("Dispute response: %s", outpDispute)
-
-// }
-
-func newAdjReq(s *test.PerunSetup, final bool) (pchannel.AdjudicatorReq, *pchannel.Params, *pchannel.State) {
-	var state *pchannel.State
-	// make sure that Version is within int64 range
-	for {
-		state = pchtest.NewRandomState(s.Rng, chtest.DefaultRandomOpts())
-		if state.Version <= uint64(math.MaxInt64) {
-			break
-		} else {
-			fmt.Println("Version is not in uint64 range: ", state.Version)
-		}
+	// Withdraw
+	{
+		// Alice
+		adjIdx := 0
+		adj := channel.NewAdjudicator(s.L2Accs[adjIdx], s.DfxConns[adjIdx])
+		ctx := s.NewCtx()
+		require.NoError(t, adj.Withdraw(ctx, req, nil))
+		withdrawerIdx := 1
+		req.Idx = 1
+		req.Acc = s.L2Accs[withdrawerIdx]
+		adjWithdrawer := channel.NewAdjudicator(s.L2Accs[withdrawerIdx], s.DfxConns[withdrawerIdx])
+		require.NoError(t, adjWithdrawer.Withdraw(ctx, req, nil))
 	}
+}
+
+func TestAdjudicator_Walkthrough(t *testing.T) {
+	s := test.NewPerunSetup(t)
+
+	chanAlloc := uint64(50000)
+
+	userIdx := 0
+
+	req, params, state := newAdjReq(s, chanAlloc, userIdx, 0, false)
+	dSetup := chtest.NewDepositSetup(params, state)
+	adjAliceIdx := 0
+	adjAlice := channel.NewAdjudicator(s.L2Accs[adjAliceIdx], s.DfxConns[adjAliceIdx])
+	adjBobIdx := 1
+	adjBob := channel.NewAdjudicator(s.L2Accs[adjBobIdx], s.DfxConns[adjBobIdx])
+	ctx := s.NewCtx()
+
+	// Fund
+
+	err := chtest.FundAll(ctx, s.Funders, dSetup.FReqs)
+	require.NoError(t, err)
+
+	// Dispute
+	{
+		// Register non-final state
+
+		fmt.Println("Alice: Register non-final state")
+
+		require.NoError(t, adjAlice.Register(ctx, req, nil))
+
+		// Register non-final state with higher version
+		next := req.Tx.State.Clone()
+		next.Version++                        // increase version to allow progression
+		test.MixBals(s.Rng, next.Balances[0]) // mix up the balances
+		next.IsFinal = false
+		sigs := s.SignState(next)
+		req.Acc = s.L2Accs[adjBobIdx]
+		req.Tx = pchannel.Transaction{State: next, Sigs: sigs}
+		req.Idx = 1
+		fmt.Println("Bob: Register some higher-version non-final state")
+
+		require.NoError(t, adjBob.Register(ctx, req, nil))
+		fmt.Println("Bob: Register/Conclude final state")
+		// Register final state with higher version
+		next = next.Clone()
+		next.Version++ // increase version to allow progression
+		next.IsFinal = true
+		sigs = s.SignState(next)
+		req.Tx = pchannel.Transaction{State: next, Sigs: sigs}
+	}
+	// Withdraw
+	{
+		// Bob
+		fmt.Println("Bob: Withdraw")
+		require.NoError(t, adjBob.Withdraw(ctx, req, nil))
+
+		// Alice
+		req.Idx = 0
+		req.Acc = s.L2Accs[0]
+		require.NoError(t, adjAlice.Withdraw(ctx, req, nil))
+	}
+}
+
+func newAdjReq(s *test.PerunSetup, alloc uint64, userIdx int, version uint64, final bool) (pchannel.AdjudicatorReq, *pchannel.Params, *pchannel.State) {
+	state := pchtest.NewRandomState(s.Rng, chtest.DefaultRandomOpts())
 	state.IsFinal = final
+	state.Version = version
+	state.Allocation.Balances[0][0] = new(big.Int).SetUint64(alloc)
+	state.Allocation.Balances[0][1] = new(big.Int).SetUint64(alloc)
 	var data [20]byte
 	s.Rng.Read(data[:])
 	nonce := pchannel.NonceFromBytes(data[:])
-	params, err := pchannel.NewParams(60, []pwallet.Address{s.Alice.Address(), s.Bob.Address()}, pchannel.NoApp(), nonce, true, false)
+	aliceAddr := s.Funders[0].GetAcc().L2Address()
+	bobAddr := s.Funders[1].GetAcc().L2Address()
+
+	params, err := pchannel.NewParams(60, []pwallet.Address{&aliceAddr, &bobAddr}, pchannel.NoApp(), nonce, true, false)
 	require.NoError(s.T, err)
 	state.ID = params.ID()
-	wState, err := chanconn.StateForChain(state)
+	sigs := s.SignState(state)
+
 	require.NoError(s.T, err)
-	sigs := s.SignState(wState)
+
+	chanIdx := pchannel.Index(userIdx)
+
+	require.NoError(s.T, err)
 	req := pchannel.AdjudicatorReq{
 		Params:    params,
-		Acc:       s.Alice,
+		Acc:       s.L2Accs[userIdx],
 		Tx:        pchannel.Transaction{State: state, Sigs: sigs},
-		Idx:       0,
+		Idx:       chanIdx,
 		Secondary: false,
 	}
 	return req, params, state

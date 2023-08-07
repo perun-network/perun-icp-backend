@@ -22,7 +22,6 @@ type (
 
 		when         time.Time
 		pollInterval time.Duration
-		//storage      StorageQueryer
 	}
 
 	// TimePoint as defined by pallet Timestamp.
@@ -37,7 +36,6 @@ func NewExpiredTimeout() *ExpiredTimeout {
 	return &ExpiredTimeout{}
 }
 
-// IsElapsed returns true.
 func (*ExpiredTimeout) IsElapsed(context.Context) bool {
 	return true
 }
@@ -54,13 +52,10 @@ func NewTimeout(when time.Time, pollInterval time.Duration) *Timeout {
 
 // IsElapsed returns whether the timeout is elapsed.
 func (t *Timeout) IsElapsed(ctx context.Context) bool {
-	// Get the current time.
 	now := time.Now()
 
-	// Check for elapsed. There is no t.Cmp, so use an or here.
 	elapsed := t.when.Before(now) || t.when.Equal(now)
 
-	// Fancy logging.
 	delta := now.Sub(t.when)
 	if elapsed {
 		t.Log().Printf("Timeout elapsed since %v", delta)

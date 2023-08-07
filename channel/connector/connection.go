@@ -24,6 +24,7 @@ import (
 	utils "perun.network/perun-icp-backend/utils"
 )
 
+// Connects Perun users with the Internet Computer
 type Connector struct {
 	Log         log.Embedding
 	DfxAgent    *agent.Agent
@@ -34,47 +35,6 @@ type Connector struct {
 	LedgerAgent *icpledger.Agent
 	PerunAgent  *icperun.Agent
 }
-
-// func NewDfxConnector(pemAccountPath string, ledgerAddr, perunAddr string, host string, port int) (*DfxConnector, error) {
-
-// 	pemAccountFullPath := filepath.Join(utils.SetHomeDir(), ".config", "dfx", "identity", pemAccountPath, "identity.pem")
-
-// 	ledgerPrincipal, err := principal.Decode(ledgerAddr)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	perunPrincipal, err := principal.Decode(perunAddr)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	dfxAgent, err := NewDfxAgent(pemAccountFullPath, host, port)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	dfxConnector := &DfxConnector{
-// 		dfxAgent: dfxAgent,
-// 	}
-
-// 	dfxConnector.ledgerAgent, err = MakeLedgerAgent(pemAccountFullPath, host, port, ledgerPrincipal)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	dfxConnector.perunAgent, err = MakePerunAgent(pemAccountFullPath, host, port, perunPrincipal)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// perunUser.l2Account, err = perunUser.NewL2Account()
-// 	// if err != nil {
-// 	// 	return nil, err
-// 	// }
-
-// 	return dfxConnector, nil
-// }
 
 // func NewDfxConnector(pemAccountPath string, ledgerAddr, perunAddr string, host string, port int) (*DfxConnector, error) {
 func NewDfxConnector(perunID, ledgerID, pemAccountPath, host string, port int) *Connector {
@@ -161,37 +121,6 @@ func NewDfxAgent(accountPath string, host string, port int) (*agent.Agent, error
 	return agent, nil
 }
 
-// func NewAgent(accountPath, host string, port int) (*agent.Agent, error) {
-// 	data, err := os.ReadFile(accountPath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var agentID identity.Identity
-// 	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	ic0, err := url.Parse(fmt.Sprintf("%s:%d", host, port))
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	fmt.Println("ic0: ", ic0)
-
-// 	agent, err := agent.New(agent.Config{
-// 		Identity: agentID,
-// 		ClientConfig: &agent.ClientConfig{
-// 			Host: ic0,
-// 		},
-// 		FetchRootKey: true,
-// 	})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return agent, nil
-// }
-
 func NewPerunAgent(canID principal.Principal, accountPath, host string, port int) (*icperun.Agent, error) {
 	data, err := os.ReadFile(accountPath)
 	if err != nil {
@@ -250,11 +179,7 @@ func NewLedgerAgent(canID principal.Principal, accountPath, host string, port in
 	return agent, nil
 }
 
-// func NewExecPath(s string) ExecPath {
-// 	return ExecPath(s)
-// }
-
-func (f *Funding) Memo() (uint64, error) {
+func (f *Funding) Memo() (Memo, error) {
 
 	hasher := sha512.New() // Assuming Hash::digest uses SHA-512.
 

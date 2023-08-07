@@ -18,6 +18,12 @@ const (
 	SigLen = 64
 	// FIDLen is the length of a FundingId in byte.
 	FIDLen = 32
+	// Length of a channel ID in byte.
+	IDLen = 32
+	// Fee for transfering on IC
+	DfxTransferFee = 10000
+	// MaxBalance is the maximum balance allowed
+	MaxBalance = uint64(1) << 30
 )
 
 type DisputePhase = uint8
@@ -48,7 +54,10 @@ type (
 	// Sig is an off-chain signature.
 	Sig = [SigLen]byte
 	// AppID is the identifier of a channel application.
-	AppID = OffIdentity
+	AppID    = OffIdentity
+	Memo     = uint64
+	BlockNum = uint64
+	ExecPath = string
 
 	// Params holds the fixed parameters of a channel and uniquely identifies it.
 	Params struct {
@@ -87,7 +96,6 @@ type (
 	}
 
 	// Funding is used to calculate a FundingId.
-	// TODO: move to funder package?
 	Funding struct {
 		// Channel is the channel to fund.
 		Channel ChannelID
@@ -105,17 +113,3 @@ type (
 		Timeout ChallengeDuration
 	}
 )
-
-const IDLen = 32
-const DfxTransferFee = 10000
-const MaxBalance = uint64(1) << 30
-
-type ChannelIdx = pchannel.ID
-type Memo = uint64
-type BlockNum uint64
-type ExecPath string
-
-// Notifies the user of the block number of the transfer
-type NotifyArgs struct {
-	Blocknum uint64
-}

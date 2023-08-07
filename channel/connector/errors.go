@@ -17,5 +17,6 @@ var (
 	ErrIdentLenMismatch = errors.New("length of an identity was wrong")
 	// Channel was assumed concluded, but is not
 	ErrNotConcluded = errors.New("channel not concluded")
+	// Depositing funds into the canister failed
 	ErrFundTransfer = errors.New("funding transfer failed")
 )

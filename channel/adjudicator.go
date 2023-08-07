@@ -61,7 +61,6 @@ func (a *Adjudicator) Register(ctx context.Context, req pchannel.AdjudicatorReq,
 	cid := req.Params.ID()
 
 	if req.Tx.IsFinal {
-
 		_, err := a.ensureConcluded(ctx, req, nil, cid)
 		if err != nil {
 			return err
@@ -69,38 +68,9 @@ func (a *Adjudicator) Register(ctx context.Context, req pchannel.AdjudicatorReq,
 
 	} else {
 
-		nonce := req.Params.Nonce
-		cid := req.Params.ID()
-		nonce32Bytes, err := chanconn.MakeNonce(nonce)
-		if err != nil {
-			return fmt.Errorf("failed to make nonce: %w", err)
-		}
-		parts, err := MakeParts(req.Params.Parts)
-		if err != nil {
-			return fmt.Errorf("failed to make parts: %w", err)
-		}
-
-		alloc := MakeAlloc(req.Tx.State.Allocation.Balances)
-		disputeArgs := icperun.AdjRequest{
-			Nonce:             nonce32Bytes,
-			Participants:      parts,
-			Channel:           cid,
-			Version:           req.Tx.State.Version,
-			ChallengeDuration: req.Params.ChallengeDuration,
-			Allocation:        alloc,
-			Sigs:              req.Tx.Sigs,
-			Finalized:         req.Tx.IsFinal,
-		}
-
-		_, err = a.conn.PerunAgent.Dispute(disputeArgs)
-		if err != nil {
-			return fmt.Errorf("failed to dispute: %w", err)
-		}
 		if err := a.checkRegister(req, states); err != nil {
 			return err
 		}
-		cid = req.Params.ID()
-
 		return a.dispute(ctx, req, cid)
 	}
 	return nil
@@ -117,19 +87,17 @@ func (a *Adjudicator) waitForDisputed(ctx context.Context, evsub *chanconn.AdjEv
 loop:
 	for {
 
-		// here query again for events
-
 		select {
-		case event := <-evsub.Events(): // never returns nil
-
-			ev, ok := event.(*chanconn.DisputedEvent)
-
-			fmt.Println("ev, ok: ", ev, ok)
+		case event := <-evsub.Events():
+			_, ok := event.(*chanconn.DisputedEvent)
+			if !ok {
+				continue loop
+			}
 
 			disputedVersion := event.Version()
 
 			if disputedVersion < version {
-				// disputed Version is lower than the recent one
+				// The disputed Version is lower or equal than the recent one.
 				a.log.Log().Tracef("Discarded dispute event. Version: %d", disputedVersion)
 				// discard the event
 				continue loop
@@ -151,17 +119,20 @@ loop:
 
 func (a *Adjudicator) waitForConcluded(ctx context.Context, evsub *chanconn.AdjEventSub, cid pchannel.ID) error {
 	a.log.Log().Tracef("Waiting for conclude event")
-	fmt.Println("Waiting for conclude event")
 loop:
 	for {
 
 		// here query again for events
 
 		select {
-		case event := <-evsub.Events(): // never returns nil
+		case event := <-evsub.Events():
 
-			ev, ok := event.(*chanconn.ConcludedEvent)
-			fmt.Println("ev: ", ev, "ok: ", ok)
+			_, ok := event.(*chanconn.ConcludedEvent)
+
+			if !ok {
+				continue loop
+			}
+
 			evsub.Close()
 			return nil
 
@@ -186,9 +157,12 @@ func (a *Adjudicator) isConcluded(ctx context.Context, cid pchannel.ID, req pcha
 
 	}
 
+	// here we simply need to check if there is a disputed events which has expired:
+	// timestamp(now) has to be greater than timestamp(dispute) + challengeDuration
+
 	cc, err := a.conn.PerunAgent.Conclude(adjReq)
 	if err != nil {
-		fmt.Println("failed to call conclude: %w", err)
+		return false, fmt.Errorf("failed to call conclude: %w", err)
 	}
 
 	if cc == "error concluding the channel" {
@@ -224,8 +198,6 @@ func (a *Adjudicator) isConcluded(ctx context.Context, cid pchannel.ID, req pcha
 			}
 
 		}
-
-		fmt.Println("qs in isConcluded: ", qs)
 
 		if qs.State.Finalized {
 			// State is already finalized, so likely has been already concluded. We look for events
@@ -307,14 +279,14 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 		alloc := MakeAlloc(req.Tx.State.Allocation.Balances)
 
 		concludeArgs := &icperun.AdjRequest{
-			Nonce:             nonce, //req.Params.Nonce.Bytes(),
+			Nonce:             nonce,
 			Participants:      parts,
 			Channel:           cid,
 			Version:           req.Tx.State.Version,
 			ChallengeDuration: req.Params.ChallengeDuration,
 			Allocation:        alloc,
 			Sigs:              req.Tx.Sigs,
-			Finalized:         req.Tx.IsFinal, // if this was true, then we would not be able to dispute! (canister will give an error)
+			Finalized:         req.Tx.IsFinal,
 		}
 
 		return concludeArgs, nil
@@ -326,7 +298,7 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 
 	_, err = a.conn.PerunAgent.Conclude(*concludeArgs)
 	if err != nil {
-		fmt.Println("failed to conclude the channel: %w", err)
+		return fmt.Errorf("failed to conclude the channel: %w", err)
 	}
 
 	evSub := chanconn.NewAdjudicatorSub(ctx, cid, a.conn) //a.Subscribe(ctx, cid)
@@ -346,8 +318,6 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 	if req.Tx.Version != qConcluded.State.Version {
 		return ErrConcludedDifferentVersion
 	}
-
-	fmt.Println("qConcluded in checkDisputes: ", qConcluded)
 
 	return nil
 }
@@ -475,7 +445,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req pchannel.AdjudicatorReq,
 		return err
 	}
 
-	err = a.withdraw(context.TODO(), req, finalized, cid)
+	err = a.withdraw(ctx, req, finalized, cid)
 	if err != nil {
 		return err
 	}
@@ -510,21 +480,21 @@ func MakeAdjReq(req pchannel.AdjudicatorReq) (icperun.AdjRequest, error) {
 		Finalized:         req.Tx.IsFinal,
 		Sigs:              req.Tx.Sigs,
 	}
+
 	return AdjArgs, nil
 
 }
 
 // func (a *Adjudicator) withdraw(ctx context.Context, req pchannel.AdjudicatorReq, finalized bool, cid64Bytes [64]byte, addrSlice []byte) error {
-func (a *Adjudicator) dispute(ctx context.Context, req pchannel.AdjudicatorReq, cid [32]byte) error {
+func (a *Adjudicator) dispute(ctx context.Context, req pchannel.AdjudicatorReq, cid pchannel.ID) error {
 	defer a.log.Log().Trace("Dispute done")
 
-	//nonce64Bytes := HashTo256(nonce.Bytes())
-	adjArgs, err := MakeAdjReq(req)
+	disputeArgs, err := MakeAdjReq(req)
 	if err != nil {
 		return fmt.Errorf("failed to make adjudicator arguments: %w", err)
 	}
 
-	disputeErr1, err := a.conn.PerunAgent.Dispute(adjArgs)
+	disputeErr1, err := a.conn.PerunAgent.Dispute(disputeArgs)
 	if err != nil {
 		return fmt.Errorf("failed to call dispute: %w", err)
 
@@ -549,7 +519,6 @@ func (a *Adjudicator) dispute(ctx context.Context, req pchannel.AdjudicatorReq, 
 // the passed request cannot be handled by the Adjudicator.
 func (*Adjudicator) checkRegister(req pchannel.AdjudicatorReq, states []pchannel.SignedState) error {
 	switch {
-
 	case req.Tx.IsFinal:
 		return errors.WithMessage(ErrAdjudicatorReqIncompatible, "cannot dispute a final state")
 	case len(states) != 0:

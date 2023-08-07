@@ -8,21 +8,7 @@ import (
 	pkgerrors "polycry.pt/poly-go/errors"
 )
 
-// FundAll executes all requests with the given funders
 func FundAll(ctx context.Context, funders []*channel.Funder, reqs []*pchannel.FundingReq) error {
-
-	for i := range funders {
-
-		err := funders[i].Fund(ctx, *reqs[i])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// FundAll executes all requests with the given funders in parallel.
-func FundConc(ctx context.Context, funders []*channel.Funder, reqs []*pchannel.FundingReq) error {
 	g := pkgerrors.NewGatherer()
 	for i := range funders {
 		i := i

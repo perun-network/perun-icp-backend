@@ -120,7 +120,6 @@ func CalcID(params *pchannel.Params) (pchannel.ID, error) {
 	IDLen := chanconn.IDLen
 
 	if len(hashSum) < IDLen {
-		fmt.Println("Hash length is less than IDLen, len(hashSum)", len(hashSum))
 		return pchannel.ID{}, fmt.Errorf("hash length is less than IDLen")
 	}
 

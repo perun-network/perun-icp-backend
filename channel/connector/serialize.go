@@ -2,14 +2,10 @@
 package connector
 
 import (
-	"crypto/sha256"
-	"fmt"
-	"github.com/aviate-labs/agent-go/candid"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
 
-	"perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
 )
 
@@ -48,61 +44,6 @@ func MakeOnIdent(addr wallet.Address) (OnIdentity, error) {
 	return ret, nil
 }
 
-// ID calculates the funding ID by encoding and hashing the Funding.
-func (f Funding) ID() (FundingID, error) {
-	var fid FundingID
-	addr := f.Part[:]
-	fullArg := fmt.Sprintf("( record { channel = %s; participant = %s })", utils.FormatVec(f.Channel[:8]), utils.FormatVec(addr))
-	data, err := candid.EncodeValueString(fullArg)
-	if err != nil {
-		return fid, fmt.Errorf("calculating funding ID: %w", err)
-	}
-	hashSum := sha256.Sum256(data)
-
-	// Copy the first 32 bytes of the hashSum to the fid variable
-	copy(fid[:], hashSum[:FIDLen])
-
-	return fid, nil
-}
-
-func (f *Funding) SerializeFundingCandidFull() ([]byte, error) {
-	// Encodes the funding struct
-	addr := f.Part[:]
-
-	fullArg := fmt.Sprintf("( record { channel = %s; participant = %s })", utils.FormatVec(f.Channel[:8]), utils.FormatVec(addr))
-
-	enc, err := candid.EncodeValueString(fullArg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode Funding as Candid value: %w", err)
-	}
-
-	_, err = candid.DecodeValueString(enc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode encoded Funding Candid value: %w", err)
-	}
-
-	return enc, nil
-}
-
-func (f *Funding) SerializeFundingCandid() ([]byte, error) {
-	// Encodes the funding struct
-	addr := f.Part[:]
-
-	fullArg := fmt.Sprintf("( record { channel = %s; participant = %s })", utils.FormatVec(f.Channel[:8]), utils.FormatVec(addr))
-
-	enc, err := candid.EncodeValueString(fullArg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode Funding as Candid value: %w", err)
-	}
-
-	_, err = candid.DecodeValueString(enc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode encoded Funding Candid value: %w", err)
-	}
-
-	return enc, nil
-}
-
 // MakeChallengeDuration creates a new ChallengeDuration from the argument.
 func MakeChallengeDuration(challengeDuration uint64) ChallengeDuration {
 	return challengeDuration
@@ -112,7 +53,7 @@ func MakeChallengeDuration(challengeDuration uint64) ChallengeDuration {
 func MakeNonce(nonce *big.Int) (Nonce, error) {
 	var ret Nonce
 
-	if nonce.Sign() < 0 { // negative?
+	if nonce.Sign() < 0 {
 		return ret, ErrNonceOutOfRange
 	}
 	if nonce.BitLen() > (8*NonceLen) || nonce.BitLen() == 0 { // too long/short?
@@ -201,4 +142,8 @@ func NewParams(p *pchannel.Params) (*Params, error) {
 		ChallengeDuration: MakeChallengeDuration(p.ChallengeDuration),
 		App:               appID,
 	}, err
+}
+
+func NewState(s *pchannel.State) (*State, error) {
+	return StateForChain(s)
 }

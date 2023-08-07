@@ -5,7 +5,7 @@ import (
 
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
-
+	"log"
 	//"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -23,7 +23,7 @@ func TestPrincipalTransfers(t *testing.T) {
 		require.NoError(t, err, "Failed to get balance")
 
 		require.NoError(t, err, "Failed to extract balance number")
-		fmt.Println("bal before sending: ", *bal)
+		log.Println("Balance before sending: ", *bal)
 		require.NoError(t, err, "Failed to get balance")
 	}
 
@@ -67,21 +67,14 @@ func TestPrincipalTransfers(t *testing.T) {
 			To: toAccount,
 		}
 
-		fmt.Println("txargslisti: ", txArgsList[i])
-
-		txBal, err := s.L1Users[i].TransferDfx(txArgsList[i], ledgerID)
+		_, err := s.L1Users[i].TransferDfx(txArgsList[i], ledgerID)
 		require.NoError(t, err, "Failed to transfer")
-		fmt.Println("txBal: ", txBal)
-		bal, err := s.L1Users[i].GetBalance()
+		_, err = s.L1Users[i].GetBalance()
 		require.NoError(t, err, "Failed to get balance")
-		fmt.Println("bali after sending funds to perun: ", bal)
 
 	}
-	balpr, err := s.PerunNode.GetBalance()
+	_, err = s.PerunNode.GetBalance()
 	require.NoError(t, err, "Failed to get balance")
-	fmt.Println("balpr: ", balpr)
-	// err = s.L1Setup.DfxSetup.StopDFX()
-	// assert.NoError(t, err, "Failed to stop DFX environment")
 }
 
 func NewL1User(prince *principal.Principal, c *chanconn.Connector) *L1User {
@@ -124,8 +117,6 @@ func (u *L1User) GetBalanceAG() (*uint64, error) {
 		return nil, fmt.Errorf("failed to get balance: %v", err)
 	}
 
-	fmt.Println("Balance in uint64: ", onChainBal.E8s)
-
 	return &onChainBal.E8s, nil
 }
 
@@ -134,7 +125,6 @@ func (u *L1User) GetBalance() (*uint64, error) {
 	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
 
 	arr := u.Conn.LedgerAgent
-	fmt.Println("sdf:", accountID.Bytes())
 	onChainBal, err := arr.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %v", err)
@@ -203,9 +193,9 @@ func TransferSetup(t *testing.T) *L1Setup {
 		Port: 4943,
 	}
 
-	aliceAccPath := "./../test/testdata/identities/usera_identity.pem"
-	bobAccPath := "./../test/testdata/identities/userb_identity.pem"
-	minterAccPath := "./../test/testdata/identities/minter_identity.pem"
+	aliceAccPath := "./../userdata/identities/usera_identity.pem"
+	bobAccPath := "./../userdata/identities/userb_identity.pem"
+	minterAccPath := "./userdata/identities/minter_identity.pem"
 
 	aliceAcc, err := chanconn.NewIdentity(aliceAccPath)
 	if err != nil {

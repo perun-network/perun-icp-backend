@@ -18,8 +18,8 @@ import (
 	"time"
 )
 
-const DefaultMaxIters = 3
-const DefaultPollInterval = 2 * time.Second
+const DefaultMaxIters = 15
+const DefaultPollInterval = 3 * time.Second
 
 type DepositReq struct {
 	Balance pchannel.Bal
@@ -119,10 +119,7 @@ func (d *Depositor) TransferToPerun(req *DepositReq) (chanconn.BlockNum, error) 
 	if err != nil {
 		return 0, fmt.Errorf("failed to build transfer: %w", err)
 	}
-	d.cnr.Mutex.Lock()
 	blockNum, err := d.cnr.TransferDfxAG(transferArgs)
-	d.cnr.Mutex.Unlock()
-
 	if blockNum.Ok == nil {
 		return 0, fmt.Errorf("blockNum is nil")
 	}
@@ -138,17 +135,11 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error { //, ci
 	if err != nil {
 		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
 	}
-
-	retntf, err := d.cnr.NotifyTransferToPerun(blnm, *d.cnr.PerunID)
-	//retntf, err := d.cnr.NotifyTransferToPerun(chanconn.BlockNum(*blnm), *d.cnr.PerunID)
-
-	fmt.Println("retntf", retntf)
+	_, err = d.cnr.NotifyTransferToPerun(blnm, *d.cnr.PerunID)
 
 	if err != nil {
 		return fmt.Errorf("failed to notify transfer to perun: %w", err)
 	}
-
-	fmt.Println("after notify transfer to perun")
 
 	addr := req.Account.L2Address()
 
@@ -166,7 +157,7 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	conn := f.conn
 	addr := acc.L2Address()
 
-	tstamp := uint64(0) //time.Now().UnixNano()
+	tstamp := uint64(0)
 	wReq, err := NewDepositReqFromPerun(&req, acc)
 	if err != nil {
 		return err
@@ -180,12 +171,10 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	if err != nil {
 		return fmt.Errorf("failed to create event subscription: %w", err)
 	}
+	//ctxFund, cancel := context.WithTimeout(context.Background(), time.Duration(10.)*time.Second)
+	//defer cancel() //req.Params.ChallengeDuration
 
-	// Create a context with a timeout.
-	ctxFund, cancel := context.WithTimeout(context.Background(), time.Duration(req.Params.ChallengeDuration)*time.Second)
-	defer cancel()
-
-	err = evSub.QueryFundingState(ctxFund)
+	err = evSub.QueryFundingState(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query funding state: %w", err)
 	}
@@ -196,23 +185,6 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 
 	return nil
 }
-
-// func (f *Funder) waitforFundings(ctx context.Context, evLi chan chanconn.Event, req pchannel.FundingReq) error {
-// 	fundingEventCount := 0
-// 	for {
-// 		select {
-// 		case <-ctx.Done():
-// 			return ctx.Err()
-// 		case event := <-evLi: //src.Events():
-// 			if event.EventType == "Funded" {
-// 				fundingEventCount++
-// 				if fundingEventCount == 1 {
-// 					return nil
-// 				}
-// 			}
-// 		}
-// 	}
-// }
 
 func NewFunder(acc wallet.Account, c *chanconn.Connector) *Funder {
 	return &Funder{
@@ -238,9 +210,9 @@ func NewDepositReqFromPerun(req *pchannel.FundingReq, acc pwallet.Account) (*Dep
 
 func MakeFundingReq(req *pchannel.FundingReq) (chanconn.Funding, error) {
 	ident, err := chanconn.MakeOffIdent(req.Params.Parts[req.Idx])
-
+	cid := req.Params.ID()
 	return chanconn.Funding{
-		Channel: req.State.ID,
+		Channel: cid,
 		Part:    ident,
 	}, err
 }

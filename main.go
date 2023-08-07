@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
-
-	//"github.com/aviate-labs/agent-go/principal"
 	"log"
-	utils "perun.network/perun-icp-backend/utils"
-
+	"os"
+	//vc "perun.network/perun-demo-tui/client"
+	//"perun.network/perun-demo-tui/view"
 	"perun.network/perun-icp-backend/client"
+	utils "perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
 )
 
@@ -23,6 +22,14 @@ const (
 	channelCollateral = 50000
 )
 
+func SetLogFile(path string) {
+	logFile, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	log.SetOutput(logFile)
+}
+
 func main() {
 
 	perunWltA := wallet.NewWallet()
@@ -30,15 +37,16 @@ func main() {
 
 	sharedComm := client.InitSharedComm()
 
-	alice, err := client.SetupPaymentClient(perunWltA, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userAPemPath)
+	alice, err := client.SetupPaymentClient("alice", perunWltA, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userAPemPath)
 	if err != nil {
 		panic(err)
 	}
 
-	bob, err := client.SetupPaymentClient(perunWltB, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userBPemPath)
+	bob, err := client.SetupPaymentClient("bob", perunWltB, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userBPemPath)
 	if err != nil {
 		panic(err)
 	}
+
 	alice.OpenChannel(bob.WireAddress(), channelCollateral)
 	achan := alice.Channel
 	bob.AcceptedChannel()
@@ -47,15 +55,13 @@ func main() {
 	balanceA := alice.GetOwnBalance()
 	balanceB := bob.GetOwnBalance()
 
-	fmt.Println("balance alice: ", balanceA)
-	fmt.Println("balance bob: ", balanceB)
-
-	fmt.Println("Seechan: ", achan, &achan)
+	log.Println("alice balance: ", balanceA)
+	log.Println("bob balance: ", balanceB)
 
 	aliceBal := alice.GetChannelBalance()
 	bobBal := bob.GetChannelBalance()
 
-	fmt.Println("Perun Canister total balance: ", aliceBal, bobBal)
+	log.Println("Perun Canister total balance: ", aliceBal, bobBal)
 
 	// sending payment/s
 
@@ -63,23 +69,15 @@ func main() {
 	achan.SendPayment(1000)
 	bchan.SendPayment(2000)
 
-	fmt.Println("achan: ", achan.GetChannel().State(), "bchan: ", bchan.GetChannel().State())
-
 	log.Println("Settling channel")
 	bchan.Settle()
-	fmt.Println("still blocking??")
-
-	perunBalAfter1 := alice.GetChannelBalance()
-	perunBalBfter1 := bob.GetChannelBalance()
-
-	fmt.Println("Perun Canister total balance after 1st Settle: ", perunBalAfter1, perunBalBfter1)
 
 	achan.Settle()
-	fmt.Println("Did i settle? bob")
-	perunBalAfter2 := alice.GetChannelBalance()
-	perunBalBfter2 := bob.GetChannelBalance()
 
-	fmt.Println("Perun Canister total balance after 2nd Settle: ", perunBalAfter2, perunBalBfter2)
+	perunBalAfterSettle := alice.GetChannelBalance()
+	perunBalBfterSettle := bob.GetChannelBalance()
+
+	log.Println("Perun Canister total balance after Settlement: ", perunBalAfterSettle, perunBalBfterSettle)
 
 	alice.Shutdown()
 	bob.Shutdown()
@@ -92,8 +90,11 @@ func main() {
 	balanceAZ := alice.GetOwnBalance()
 	balanceBZ := bob.GetOwnBalance()
 
-	fmt.Println("balance alice: ", balanceAZ)
-	fmt.Println("balance bob: ", balanceBZ)
+	log.Println("alice balance after settlement: ", balanceAZ)
+	log.Println("bob balance after settlement: ", balanceBZ)
 
-	fmt.Println("Perun Canister total balance after Settle: ", perunBal)
+	log.Println("Perun Canister total balance after Settle: ", perunBal)
+	// clients := []vc.DemoClient{alice, bob}
+	// _ = view.RunDemo("Internet Computer Payment Channel Demo", clients)
+
 }

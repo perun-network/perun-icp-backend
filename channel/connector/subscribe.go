@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 
 	pchannel "perun.network/go-perun/channel"
@@ -69,7 +68,6 @@ func NewAdjudicatorSub(ctx context.Context, cid pchannel.ID, conn *Connector) *A
 }
 
 func (s *AdjEventSub) run(ctx context.Context) {
-	fmt.Println("inside adjeventsub run")
 	s.log.Log().Info("EventSource Listening started from start time")
 	finish := func(err error) {
 		s.err = err
@@ -78,7 +76,7 @@ func (s *AdjEventSub) run(ctx context.Context) {
 	}
 polling:
 	for {
-		s.log.Log().Debug("Inside EventSource.run loop")
+		s.log.Log().Debug("AdjudicatorSub is listening for Adjudicator Events")
 		select {
 		case <-ctx.Done():
 			finish(nil)
@@ -88,9 +86,7 @@ polling:
 			return
 		case <-time.After(s.pollInterval):
 			eventStr, err := s.QueryEvents()
-			fmt.Println("eventStr in run(ctx)", eventStr)
 			if err != nil {
-				// QueryEvents should be executable correctly, so we abort the conclusion subscription
 				s.panicErr <- err
 			}
 
@@ -112,16 +108,14 @@ polling:
 				}
 
 				if len(adjEvents) == 0 {
-					s.log.Log().Warn("No events detected but, continuing polling...")
+					//s.log.Log().Warn("No events detected but, continuing polling...")
 					continue polling
 				}
 
 				s.log.Log().Debugf("Parsed events: %v", adjEvents)
 
 				for _, event := range adjEvents {
-					fmt.Println("adjevent in run(ctx)", event)
 					s.events <- event
-					//s.Ev = append(s.Ev, event)
 				}
 
 				s.log.Log().Infof("Found new event/s")
@@ -140,22 +134,20 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 	if s.Events() == nil {
 		return nil
 	}
-	// Wait for event or closed.
 	select {
 	case event := <-s.Events():
 		if event == nil {
 			return nil
 		}
 
-		fmt.Println("event in Next()", event)
 		timestamp := event.Tstamp()
 
 		switch e := event.(type) {
 		case *DisputedEvent:
 
 			dispEvent := pchannel.AdjudicatorEventBase{
-				VersionV: event.Version(),
-				IDV:      event.ID(),
+				VersionV: e.Version(),
+				IDV:      e.ID(),
 				TimeoutV: MakeTimeout(timestamp),
 			}
 
@@ -165,10 +157,9 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 			s.closer.Close()
 			return ddn
 		case *ConcludedEvent:
-			fmt.Println("Got a ConcludedEvent: ", e)
 			conclEvent := pchannel.AdjudicatorEventBase{
-				VersionV: event.Version(),
-				IDV:      event.ID(),
+				VersionV: e.Version(),
+				IDV:      e.ID(),
 				TimeoutV: MakeTimeout(timestamp),
 			}
 			ccn := &pchannel.ConcludedEvent{
@@ -177,8 +168,7 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 			s.closer.Close()
 			return ccn
 		default:
-			// Handle other cases here or do nothing
-			fmt.Println("Got an unknown event type")
+			// ot an unknown event type
 			return nil
 		}
 
@@ -188,6 +178,6 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 }
 
 func (s *AdjEventSub) Close() error {
-	s.cancel()
+	s.closer.Close()
 	return nil
 }

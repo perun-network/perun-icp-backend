@@ -90,6 +90,10 @@ type RegisteredState = record {
 	timeout : Timestamp;
 };
 
+type NotifyInput = record {
+	notify : nat64;
+}
+
 service : {
 	"deposit" : (Funding) -> (opt Error);
 	"query_holdings" : (Funding) -> (opt Amount) query;
@@ -99,7 +103,7 @@ service : {
 	"withdraw" : (WithdrawalRequest) -> (opt Error);
 	"query_fid" : (Funding) -> (opt Memo) query;
 	"query_memo" : (Memo) -> (opt Memo) query;
-	"transaction_notification" : (nat64) -> ();
+	"transaction_notification" : (nat64) -> (opt Amount);
 	"query_funding_memo" : (FundMem) -> (opt FundMem) query;
 	"query_funding_only" : (Funding) -> (opt Funding) query;
 	"__get_candid_interface_tmp_hack" : () -> (text) query;

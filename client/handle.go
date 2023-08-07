@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	//"math/big"
 	"time"
 
 	"perun.network/go-perun/channel"
@@ -35,12 +34,16 @@ func (c *PaymentClient) HandleProposal(p client.ChannelProposal, r *client.Propo
 		return lcp, nil
 	}()
 	if err != nil {
-		r.Reject(context.TODO(), err.Error()) //nolint:errcheck // It's OK if rejection fails.
+		errReject := r.Reject(context.TODO(), err.Error())
+		if errReject != nil {
+			// Log the error or take other action as needed
+			fmt.Printf("Error rejecting proposal: %v\n", errReject)
+		}
 	}
 
 	// Create a channel accept message and send it.
 	accept := lcp.Accept(
-		c.account,                // The account we use in the channel.
+		c.account.Address(),      // The account we use in the channel.
 		client.WithRandomNonce(), // Our share of the channel nonce.
 	)
 	ch, err := r.Accept(context.TODO(), accept)
@@ -86,7 +89,7 @@ func (c *PaymentClient) HandleUpdate(cur *channel.State, next client.ChannelUpda
 
 // HandleAdjudicatorEvent is the callback for smart contract events.
 func (c *PaymentClient) HandleAdjudicatorEvent(e channel.AdjudicatorEvent) {
-	log.Printf("Adjudicator event: type = %T, client = %v", e, c.account)
+	log.Printf("Adjudicator event: type = %T, client = %v", e, c.account.Address())
 }
 
 func (c *PaymentClient) GetChannel() (*PaymentChannel, error) {
