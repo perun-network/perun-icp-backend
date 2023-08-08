@@ -107,20 +107,17 @@ func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) { //*Paym
 
 }
 
-// WireAddress returns the wire address of the client.
-// func (c *PaymentClient) WireAddress() *icwire.Address {
-// 	waddr := icwallet.AsAddr(c.account)
-// 	return &icwire.Address{Address: waddr}
-// }
-
 func (p *PaymentClient) WireAddress() wire.Address {
-	wAddr := p.wAddr
-	return wAddr
+	return p.wAddr
 }
 
 // AcceptedChannel returns the next accepted channel.
-func (c *PaymentClient) AcceptedChannel() { //*PaymentChannel
+func (c *PaymentClient) AcceptedChannel() *PaymentChannel {
 	c.Channel = <-c.channels
+	c.Channel.ch.OnUpdate(c.NotifyAllState)
+	c.NotifyAllState(nil, c.Channel.ch.State())
+	return c.Channel
+
 }
 
 // Shutdown gracefully shuts down the client.
@@ -128,7 +125,11 @@ func (c *PaymentClient) Shutdown() {
 	c.perunClient.Close()
 }
 
-func (c *PaymentClient) GetChannelBalance() *big.Int {
+func (c *PaymentClient) GetChannelBalance() (*big.Int, error) {
+	if c.Channel == nil {
+		return big.NewInt(0), nil
+	}
+
 	chanParams := c.Channel.GetChannelParams()
 	cid := chanParams.ID()
 	addr := chanParams.Parts[c.Channel.ch.Idx()]
@@ -148,10 +149,10 @@ func (c *PaymentClient) GetChannelBalance() *big.Int {
 	}
 
 	if (*balNat) == nil {
-		return big.NewInt(0)
+		return big.NewInt(0), nil
 	}
 
-	return (*balNat).BigInt()
+	return (*balNat).BigInt(), nil
 }
 
 func (p *PaymentClient) Deregister(observer vc.Observer) {

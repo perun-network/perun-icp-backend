@@ -118,38 +118,38 @@ func MakeTransferArgs(memo Memo, amount uint64, fee uint64, recipient string) ic
 	}
 }
 
-func (c *Connector) TransferDfxAG(txArgs icpledger.TransferArgs) (*icpledger.TransferResult, error) {
-
-	a := c.LedgerAgent
-	transferResult, err := a.Transfer(txArgs)
+func (c *Connector) TransferDfx(txArgs icpledger.TransferArgs) (*icpledger.TransferResult, error) {
+	transferResult, err := c.LedgerAgent.Transfer(txArgs)
 	if err != nil {
 		return nil, ErrFundTransfer
 	}
 
 	if transferResult.Err != nil {
-		switch {
-		case transferResult.Err.BadFee != nil:
-			fmt.Printf("Transfer failed due to bad fee: expected fee: %v\n", transferResult.Err.BadFee.ExpectedFee)
-		case transferResult.Err.InsufficientFunds != nil:
-			fmt.Printf("Transfer failed due to insufficient funds: current balance: %v\n", transferResult.Err.InsufficientFunds.Balance)
-		case transferResult.Err.TxTooOld != nil:
-			fmt.Printf("Transfer failed because the transaction is too old. Allowed window (in nanos): %v\n", transferResult.Err.TxTooOld.AllowedWindowNanos)
-		case transferResult.Err.TxCreatedInFuture != nil:
-			fmt.Println("Transfer failed because the transaction was created in the future.")
-		case transferResult.Err.TxDuplicate != nil:
-			fmt.Printf("Transfer failed because it's a duplicate of transaction at block index: %v\n", transferResult.Err.TxDuplicate.DuplicateOf)
-		default:
-			fmt.Println("Transfer failed due to unknown reasons.")
-		}
-		return nil, fmt.Errorf("transfer failed with error: %v", transferResult.Err)
+		return nil, HandleTransferError(transferResult.Err)
 	}
 
-	blnm := transferResult.Ok
-	if blnm == nil {
+	if transferResult.Ok == nil {
 		return nil, fmt.Errorf("Blocknumber is nil")
 	}
 
 	return transferResult, nil
+}
+
+func HandleTransferError(err *icpledger.TransferError) error {
+	switch {
+	case err.BadFee != nil:
+		return fmt.Errorf("Transfer failed due to bad fee: expected fee: %v", err.BadFee.ExpectedFee)
+	case err.InsufficientFunds != nil:
+		return fmt.Errorf("Transfer failed due to insufficient funds: current balance: %v", err.InsufficientFunds.Balance)
+	case err.TxTooOld != nil:
+		return fmt.Errorf("Transfer failed because the transaction is too old. Allowed window (in nanos): %v", err.TxTooOld.AllowedWindowNanos)
+	case err.TxCreatedInFuture != nil:
+		return fmt.Errorf("Transfer failed because the transaction was created in the future.")
+	case err.TxDuplicate != nil:
+		return fmt.Errorf("Transfer failed because it's a duplicate of transaction at block index: %v", err.TxDuplicate.DuplicateOf)
+	default:
+		return fmt.Errorf("Transfer failed due to unknown reasons.")
+	}
 }
 
 func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun principal.Principal) (uint64, error) {

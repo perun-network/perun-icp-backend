@@ -1,37 +1,9 @@
 package channel
 
 import (
-	"crypto/sha512"
 	"encoding/binary"
 	"math/big"
 )
-
-func HashTo256(inp []byte) [32]byte {
-	newhash := sha512.New()
-	newhash.Write([]byte(inp))
-	hashSum := newhash.Sum(nil)
-
-	var hash [32]byte
-	copy(hash[:], hashSum)
-
-	return hash
-
-}
-
-func SerializeState(cid [32]byte, version uint64, alloc []*big.Int, finalized bool) []byte {
-	var stateBytes []byte
-
-	stateBytes = append(stateBytes, cid[:]...)
-	stateBytes = append(stateBytes, Uint64ToBytes(version)...)
-
-	for _, a := range alloc {
-		stateBytes = append(stateBytes, a.Bytes()...)
-	}
-
-	stateBytes = append(stateBytes, BoolToBytes(finalized)...)
-
-	return stateBytes
-}
 
 func Uint64ToBytes(i uint64) []byte {
 	var buf [8]byte

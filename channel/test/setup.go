@@ -24,8 +24,9 @@ import (
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
 
+	"path/filepath"
 	"perun.network/perun-icp-backend/wallet"
-
+	"runtime"
 	"testing"
 	"time"
 )
@@ -50,8 +51,17 @@ func NewTestSetup(t *testing.T) *Setup {
 		Port: 4943,
 	}
 
-	aliceAccPath := "./../../userdata/identities/usera_identity.pem"
-	bobAccPath := "./../../userdata/identities/userb_identity.pem"
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("Error determining current file path")
+	}
+
+	basePath := filepath.Dir(filename)
+
+	//aliceAccPath := "./../../userdata/identities/usera_identity.pem"
+	aliceAccPath := filepath.Join(basePath, "./../../userdata/identities/usera_identity.pem")
+	//bobAccPath := "./../../userdata/identities/userb_identity.pem"
+	bobAccPath := filepath.Join(basePath, "./../../userdata/identities/userb_identity.pem")
 
 	aliceL1Acc, err := chanconn.NewIdentity(aliceAccPath)
 	if err != nil {

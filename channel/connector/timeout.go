@@ -89,23 +89,3 @@ func MakeTimeout(sec ChallengeDuration) pchannel.Timeout {
 func MakeTime(sec ChallengeDuration) time.Time {
 	return time.Unix(int64(sec), 0)
 }
-
-// // pollTime returns the current time of the blockchain.
-// func (t *Timeout) pollTime() (time.Time, error) {
-// 	key, err := t.storage.BuildKey("Timestamp", "Now")
-// 	if err != nil {
-// 		return time.Unix(0, 0), err
-// 	}
-// 	_now, err := t.storage.QueryOne(0, key)
-// 	if err != nil {
-// 		return time.Unix(0, 0), err
-// 	}
-
-// 	var now TimePoint
-// 	if err := types.DecodeFromBytes(_now.StorageData, &now); err != nil {
-// 		return time.Unix(0, 0), err
-// 	}
-// 	unixNow := time.Unix(int64(now/1000), 0)
-// 	t.Log().Tracef("Polled time: %v", unixNow.UTC())
-// 	return unixNow, nil
-// }

@@ -21,7 +21,6 @@ import (
 )
 
 func TestTransferToLedger(t *testing.T) {
-
 	tSetup := chtest.NewTestSetup(t)
 
 	aliceLedger := tSetup.DfxConns[0].LedgerAgent
@@ -30,13 +29,9 @@ func TestTransferToLedger(t *testing.T) {
 	accID := aliceL1ID.AccountIdentifier(principal.DefaultSubAccount)
 
 	_, err := aliceLedger.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
-	if err != nil {
-		t.Fatalf("Failed to get account balance: %v", err)
-	}
+	require.NoError(t, err, "Failed to get account balance")
 
 	perunID := tSetup.DfxConns[0].PerunID
-
-	require.NoError(t, err, "Failed to decode principal")
 	perunaccountID := perunID.AccountIdentifier(principal.DefaultSubAccount)
 	toAccount := perunaccountID.Bytes()
 
@@ -57,34 +52,18 @@ func TestTransferToLedger(t *testing.T) {
 	}
 
 	if txRes.Err != nil {
-		if txRes.Err.BadFee != nil {
-			fmt.Printf("BadFee error. Expected Fee: %v\n", txRes.Err.BadFee.ExpectedFee)
-		} else if txRes.Err.InsufficientFunds != nil {
-			fmt.Printf("InsufficientFunds error. Balance: %v\n", txRes.Err.InsufficientFunds.Balance)
-		} else if txRes.Err.TxTooOld != nil {
-			fmt.Printf("TxTooOld error. Allowed Window Nanos: %v\n", txRes.Err.TxTooOld.AllowedWindowNanos)
-		} else if txRes.Err.TxCreatedInFuture != nil {
-			fmt.Println("TxCreatedInFuture error.")
-		} else if txRes.Err.TxDuplicate != nil {
-			fmt.Printf("TxDuplicate error. Duplicate Of: %v\n", txRes.Err.TxDuplicate.DuplicateOf)
-		} else {
-			fmt.Println("Unknown error")
-		}
+		t.Fatalf("Transfer failed with error: %v", chanconn.HandleTransferError(txRes.Err))
 	} else if txRes.Ok != nil {
 		fmt.Println("BlockIndex: ", *txRes.Ok)
 	} else {
 		fmt.Println("Both BlockIndex and TransferError are nil")
 	}
+
 	_, err = aliceLedger.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
-	if err != nil {
-		t.Fatalf("Failed to get account balance: %v", err)
-	}
+	require.NoError(t, err, "Failed to get account balance")
 
 	_, err = aliceLedger.AccountBalance(icpledger.AccountBalanceArgs{Account: toAccount})
-	if err != nil {
-		t.Fatalf("Failed to get account balance: %v", err)
-	}
-
+	require.NoError(t, err, "Failed to get account balance")
 }
 
 func TestQueryPerunCanister(t *testing.T) {

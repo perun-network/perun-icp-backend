@@ -87,19 +87,27 @@ func FormatState(c *PaymentChannel, state *channel.State) string { //, network t
 	id := c.ch.ID()
 	parties := c.ch.Params().Parts
 
-	balA, _ := ShannonToCKByte(state.Allocation.Balance(0, c.currency)).Float64()
+	//balA, _ := ShannonToCKByte(state.Allocation.Balance(0, c.currency)).Float64()
+	bigIntA := state.Allocation.Balance(0, c.currency) // Assuming this returns a *big.Int
+	bigFloatA := new(big.Float).SetInt(bigIntA)
+	balA, _ := bigFloatA.Float64()
+	//balA := state.Allocation.Balance(0, c.currency).Float64()
 	balAStr := strconv.FormatFloat(balA, 'f', 4, 64)
 
 	fstPartyPaymentAddr := parties[0].String()
 	sndPartyPaymentAddr := parties[1].String()
 
-	balB, _ := ShannonToCKByte(state.Allocation.Balance(1, c.currency)).Float64()
+	//balB, _ := ShannonToCKByte(state.Allocation.Balance(1, c.currency)).Float64()
+	bigIntB := state.Allocation.Balance(1, c.currency) // Assuming this returns a *big.Int
+	bigFloatB := new(big.Float).SetInt(bigIntB)
+	balB, _ := bigFloatB.Float64()
+
 	balBStr := strconv.FormatFloat(balB, 'f', 4, 64)
 	if len(parties) != 2 {
 		log.Fatalf("invalid parties length: " + strconv.Itoa(len(parties)))
 	}
 	ret := fmt.Sprintf(
-		"Channel ID: [green]%s[white]\nBalances:\n    %s: [green]%s[white] IC token\n    %s: [green]%s[white] ICP\nFinal: [green]%t[white]\nVersion: [green]%d[white]",
+		"Channel ID: [green]%s[white]\nBalances:\n    %s: [green]%s[white] ICP\n    %s: [green]%s[white] ICP\nFinal: [green]%t[white]\nVersion: [green]%d[white]",
 		hex.EncodeToString(id[:]),
 		fstPartyPaymentAddr,
 		balAStr,

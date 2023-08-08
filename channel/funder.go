@@ -13,6 +13,7 @@ import (
 	pwallet "perun.network/go-perun/wallet"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
+
 	"perun.network/perun-icp-backend/wallet"
 
 	"time"
@@ -89,7 +90,7 @@ polling:
 	for i := 0; i < f.maxIters; i++ {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return makeTimeoutErr(funderIdx)
 		case <-time.After(f.pollInterval):
 			eventStr, err := f.QueryEvents()
 			if err != nil {
@@ -110,7 +111,18 @@ polling:
 			}
 		}
 	}
-	return ErrNotFundedInTime
+	return makeTimeoutErr(funderIdx)
+}
+
+func makeTimeoutErr(remains pchannel.Index) error {
+	indices := make([]pchannel.Index, 0, 1)
+	indices = append(indices, 0)
+	return pchannel.NewFundingTimeoutError(
+		[]*pchannel.AssetFundingError{{
+			Asset:         Asset.Index(),
+			TimedOutPeers: indices,
+		}},
+	)
 }
 
 func (d *Depositor) TransferToPerun(req *DepositReq) (chanconn.BlockNum, error) {
@@ -119,7 +131,7 @@ func (d *Depositor) TransferToPerun(req *DepositReq) (chanconn.BlockNum, error) 
 	if err != nil {
 		return 0, fmt.Errorf("failed to build transfer: %w", err)
 	}
-	blockNum, err := d.cnr.TransferDfxAG(transferArgs)
+	blockNum, err := d.cnr.TransferDfx(transferArgs)
 	if blockNum.Ok == nil {
 		return 0, fmt.Errorf("blockNum is nil")
 	}
@@ -171,16 +183,10 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	if err != nil {
 		return fmt.Errorf("failed to create event subscription: %w", err)
 	}
-	//ctxFund, cancel := context.WithTimeout(context.Background(), time.Duration(10.)*time.Second)
-	//defer cancel() //req.Params.ChallengeDuration
 
 	err = evSub.QueryFundingState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to query funding state: %w", err)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to query events: %w", err)
+		return err
 	}
 
 	return nil

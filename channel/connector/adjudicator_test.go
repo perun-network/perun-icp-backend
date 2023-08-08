@@ -3,7 +3,6 @@
 package connector_test
 
 import (
-	//"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"math/big"

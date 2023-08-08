@@ -57,6 +57,8 @@ func (c *PaymentClient) HandleProposal(p client.ChannelProposal, r *client.Propo
 
 	// Store channel.
 	c.channels <- newPaymentChannel(ch, c.currency)
+	c.AcceptedChannel()
+
 }
 
 // HandleUpdate is the callback for incoming channel updates.

@@ -1,13 +1,12 @@
-package client
+package client_test
 
 import (
 	"fmt"
 
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
-	"log"
-	//"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log"
 
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/setup"
@@ -107,19 +106,6 @@ type L1User struct {
 	Conn   *chanconn.Connector
 }
 
-func (u *L1User) GetBalanceAG() (*uint64, error) {
-
-	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
-
-	arr := u.Conn.LedgerAgent
-	onChainBal, err := arr.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get balance: %v", err)
-	}
-
-	return &onChainBal.E8s, nil
-}
-
 func (u *L1User) GetBalance() (*uint64, error) {
 
 	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
@@ -195,7 +181,7 @@ func TransferSetup(t *testing.T) *L1Setup {
 
 	aliceAccPath := "./../userdata/identities/usera_identity.pem"
 	bobAccPath := "./../userdata/identities/userb_identity.pem"
-	minterAccPath := "./userdata/identities/minter_identity.pem"
+	minterAccPath := "./../userdata/identities/minter_identity.pem"
 
 	aliceAcc, err := chanconn.NewIdentity(aliceAccPath)
 	if err != nil {

@@ -9,10 +9,6 @@ import (
 const ChanBuffSize = 1024
 const MaxNumIters = 4
 
-type DepositedEvent struct {
-	Funded bool
-}
-
 type (
 
 	// EventPredicate can be used to filter events.
@@ -21,7 +17,7 @@ type (
 	PerunEvent interface {
 		ID() pchannel.ID
 		Timeout() pchannel.Timeout
-		Version() uint64
+		Version() Version
 	}
 
 	DisputedEvent struct {
@@ -30,7 +26,7 @@ type (
 		Tout      uint64
 		Timestamp uint64
 		disputed  bool
-		VersionV  uint64
+		VersionV  Version
 		IDV       pchannel.ID
 	}
 
@@ -40,14 +36,14 @@ type (
 		Tout      uint64
 		Timestamp uint64
 		concluded bool
-		VersionV  uint64
+		VersionV  Version
 		IDV       pchannel.ID
 	}
 
 	FundedEvent struct {
 		Cid     FundingID
 		Balance Balance
-		Vs      uint64
+		Vs      Version
 	}
 )
 
@@ -63,7 +59,7 @@ func (c *FundedEvent) Timeout() pchannel.Timeout {
 func (c *FundedEvent) ID() pchannel.ID {
 	return c.Cid
 }
-func (c *FundedEvent) Version() uint64 {
+func (c *FundedEvent) Version() Version {
 	return c.Vs
 }
 
@@ -75,10 +71,10 @@ func (d *DisputedEvent) Timeout() pchannel.Timeout {
 func (d *DisputedEvent) ID() pchannel.ID {
 	return d.IDV
 }
-func (d *DisputedEvent) Version() uint64 {
+func (d *DisputedEvent) Version() Version {
 	return d.VersionV
 }
-func (d *DisputedEvent) Tstamp() uint64 {
+func (d *DisputedEvent) Tstamp() Version {
 	return d.Timestamp
 }
 
@@ -90,7 +86,7 @@ func (c *ConcludedEvent) Timeout() pchannel.Timeout {
 func (c *ConcludedEvent) ID() pchannel.ID {
 	return c.IDV
 }
-func (c *ConcludedEvent) Version() uint64 {
+func (c *ConcludedEvent) Version() Version {
 	return c.VersionV
 }
 func (c *ConcludedEvent) Tstamp() uint64 {
@@ -101,7 +97,6 @@ func (s *AdjEventSub) Events() <-chan AdjEvent {
 	return s.events
 }
 
-// Err returns the error channel. Will be closed when the EventSource is closed.
 func (s *AdjEventSub) Err() error {
 	return s.err
 }
