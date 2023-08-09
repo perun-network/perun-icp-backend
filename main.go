@@ -5,8 +5,9 @@ import (
 	"os"
 	vc "perun.network/perun-demo-tui/client"
 	"perun.network/perun-demo-tui/view"
+
+	//chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/client"
-	//utils "perun.network/perun-icp-backend/utils"
 	"perun.network/perun-icp-backend/wallet"
 )
 
@@ -58,9 +59,14 @@ func main() {
 	// log.Println("alice balance: ", balanceA)
 	// log.Println("bob balance: ", balanceB)
 
-	// aliceBal := alice.GetChannelBalance()
-	// bobBal := bob.GetChannelBalance()
-
+	// aliceBal, err := alice.GetChannelBalance()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// bobBal, err := bob.GetChannelBalance()
+	// if err != nil {
+	// 	panic(err)
+	// }
 	// log.Println("Perun Canister total balance: ", aliceBal, bobBal)
 
 	// // sending payment/s
@@ -74,15 +80,21 @@ func main() {
 
 	// achan.Settle()
 
-	// perunBalAfterSettle := alice.GetChannelBalance()
-	// perunBalBfterSettle := bob.GetChannelBalance()
+	// perunBalAfterSettle, err := alice.GetChannelBalance()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// perunBalBfterSettle, err := bob.GetChannelBalance()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// log.Println("Perun Canister total balance after Settlement: ", perunBalAfterSettle, perunBalBfterSettle)
 
 	// alice.Shutdown()
 	// bob.Shutdown()
 
-	// recipPerunID, err := utils.DecodePrincipal(perunPrincipal)
+	// recipPerunID, err := chanconn.DecodePrincipal(perunPrincipal)
 	// if err != nil {
 	// 	panic(err)
 	// }

@@ -2,16 +2,14 @@ package client_test
 
 import (
 	"fmt"
-
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
 	"github.com/stretchr/testify/require"
 	"log"
-
+	"math/rand"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
-	"perun.network/perun-icp-backend/setup"
-
 	"testing"
+	"time"
 )
 
 func TestPrincipalTransfers(t *testing.T) {
@@ -21,35 +19,28 @@ func TestPrincipalTransfers(t *testing.T) {
 		bal, err := s.L1Users[i].GetBalance()
 		require.NoError(t, err, "Failed to get balance")
 
-		require.NoError(t, err, "Failed to extract balance number")
 		log.Println("Balance before sending: ", *bal)
-		require.NoError(t, err, "Failed to get balance")
 	}
 
 	// balances to transfer
 
+	rand.Seed(time.Now().UnixNano()) // Seed the random number generator
+
 	txBalances := make([]uint64, len(s.L1Users))
-	txBalances[0] = 1000000
-	txBalances[1] = 2000000
+	for i := range txBalances {
+		txBalances[i] = uint64(rand.Intn(4001) + 1000) // Assign a random uint64 value between 1000 and 5000
+	}
 
 	ledgerPrincipal := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
 	perunPrincipal := "be2us-64aaa-aaaaa-qaabq-cai"
-
-	//sender1 := s.L1Users[0].Prince.AccountIdentifier(principal.DefaultSubAccount)
 
 	perunID, err := principal.Decode(perunPrincipal)
 	require.NoError(t, err, "Failed to decode principal")
 	ledgerID, err := principal.Decode(ledgerPrincipal)
 	require.NoError(t, err, "Failed to decode principal")
 
-	require.NoError(t, err, "Failed to decode principal")
-
 	perunaccountID := perunID.AccountIdentifier(principal.DefaultSubAccount)
 	txArgsList := make([]icpledger.TransferArgs, len(s.L1Users))
-
-	userTags := make([]string, len(s.L1Users))
-	userTags[0] = "usera"
-	userTags[1] = "userb"
 
 	for i := 0; i < len(s.L1Users); i++ {
 		//fromSubaccount := s.L1Users[i].Prince.AccountIdentifier(principal.DefaultSubAccount).Bytes()
@@ -61,7 +52,7 @@ func TestPrincipalTransfers(t *testing.T) {
 			}{E8s: txBalances[i]},
 			Fee: struct {
 				E8s uint64 "ic:\"e8s\""
-			}{E8s: 10000},
+			}{E8s: chanconn.DfxTransferFee},
 			//FromSubaccount: &fromSubaccount,
 			To: toAccount,
 		}
@@ -110,8 +101,8 @@ func (u *L1User) GetBalance() (*uint64, error) {
 
 	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
 
-	arr := u.Conn.LedgerAgent
-	onChainBal, err := arr.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
+	ledgerAgent := u.Conn.LedgerAgent
+	onChainBal, err := ledgerAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %v", err)
 	}
@@ -174,10 +165,8 @@ func SimpleTxSetup(t *testing.T) *OnChainBareSetup {
 
 func TransferSetup(t *testing.T) *L1Setup {
 
-	testConfig := setup.DfxConfig{
-		Host: "http://127.0.0.1",
-		Port: 4943,
-	}
+	Host := "http://127.0.0.1"
+	Port := 4943
 
 	aliceAccPath := "./../userdata/identities/usera_identity.pem"
 	bobAccPath := "./../userdata/identities/userb_identity.pem"
@@ -210,9 +199,9 @@ func TransferSetup(t *testing.T) *L1Setup {
 	}
 
 	accs := []*principal.Principal{&alicePrince, &bobPrince}
-	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, testConfig.Host, testConfig.Port)
-	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, testConfig.Host, testConfig.Port)
-	connPerun := chanconn.NewDfxConnector(perunID, ledgerID, minterAccPath, testConfig.Host, testConfig.Port)
+	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, Host, Port)
+	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, Host, Port)
+	connPerun := chanconn.NewDfxConnector(perunID, ledgerID, minterAccPath, Host, Port)
 
 	conns := []*chanconn.Connector{conn1, conn2}
 	return &L1Setup{t, accs, &minterPrince, &perunPrince, conns, connPerun}

@@ -4,10 +4,10 @@ package test
 import (
 	"context"
 	cr "crypto/rand"
-	"github.com/aviate-labs/agent-go/candid"
+	//"github.com/aviate-labs/agent-go/candid"
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
-	"github.com/stretchr/testify/require"
+	//"github.com/stretchr/testify/require"
 	"math"
 	"math/rand"
 
@@ -15,12 +15,12 @@ import (
 	pchtest "perun.network/go-perun/channel/test"
 	"perun.network/perun-icp-backend/channel"
 
-	"perun.network/perun-icp-backend/setup"
-	"perun.network/perun-icp-backend/utils"
+	//"perun.network/perun-icp-backend/setup"
+	//"perun.network/perun-icp-backend/utils"
 
 	pkgtest "polycry.pt/poly-go/test"
 
-	pwallet "perun.network/go-perun/wallet"
+	//pwallet "perun.network/go-perun/wallet"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
 
@@ -46,10 +46,9 @@ func NewRandL2Account() (wallet.Account, error) {
 }
 
 func NewTestSetup(t *testing.T) *Setup {
-	testConfig := setup.DfxConfig{
-		Host: "http://127.0.0.1",
-		Port: 4943,
-	}
+
+	Host := "http://127.0.0.1"
+	Port := 4943
 
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
@@ -58,9 +57,7 @@ func NewTestSetup(t *testing.T) *Setup {
 
 	basePath := filepath.Dir(filename)
 
-	//aliceAccPath := "./../../userdata/identities/usera_identity.pem"
 	aliceAccPath := filepath.Join(basePath, "./../../userdata/identities/usera_identity.pem")
-	//bobAccPath := "./../../userdata/identities/userb_identity.pem"
 	bobAccPath := filepath.Join(basePath, "./../../userdata/identities/userb_identity.pem")
 
 	aliceL1Acc, err := chanconn.NewIdentity(aliceAccPath)
@@ -88,8 +85,8 @@ func NewTestSetup(t *testing.T) *Setup {
 	ledgerID := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
 
 	accsL1 := []*principal.Principal{&alicePrince, &bobPrince}
-	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, testConfig.Host, testConfig.Port)
-	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, testConfig.Host, testConfig.Port)
+	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, Host, Port)
+	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, Host, Port)
 
 	conns := []*chanconn.Connector{conn1, conn2}
 	return &Setup{t, pkgtest.Prng(t), accsL1, accsL2, conns}
@@ -173,22 +170,6 @@ func NewDepositSetup(params *pchannel.Params, state *pchannel.State, accs ...wal
 		FinalBals: []pchannel.Bal{balAlice, balBob},
 		DReqs:     dReqs,
 	}
-}
-
-// SignState returns the signatures for Alice and Bob on the state.
-func (s *Setup) SignState(state *chanconn.State) []pwallet.Sig {
-
-	stateArgs := utils.FormatStateArgs(state.Channel[:], state.Version, state.Balances, state.Final)
-
-	data, err := candid.EncodeValueString(stateArgs)
-	require.NoError(s.T, err)
-
-	sig1, err := s.L2Accs[0].SignData(data)
-	require.NoError(s.T, err)
-	sig2, err := s.L2Accs[1].SignData(data)
-	require.NoError(s.T, err)
-
-	return []pwallet.Sig{sig1, sig2}
 }
 
 func (s *Setup) GetL1Balances() ([]uint64, error) {

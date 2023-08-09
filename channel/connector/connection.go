@@ -11,17 +11,14 @@ import (
 	"github.com/aviate-labs/agent-go"
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 
+	"github.com/aviate-labs/agent-go/identity"
+	"github.com/aviate-labs/agent-go/principal"
 	"math/big"
 	"net/url"
 	"os"
-	"sync"
-
-	"github.com/aviate-labs/agent-go/identity"
-	"github.com/aviate-labs/agent-go/principal"
-
 	"perun.network/go-perun/log"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
-	utils "perun.network/perun-icp-backend/utils"
+	"sync"
 )
 
 // Connects Perun users with the Internet Computer
@@ -36,7 +33,6 @@ type Connector struct {
 	PerunAgent  *icperun.Agent
 }
 
-// func NewDfxConnector(pemAccountPath string, ledgerAddr, perunAddr string, host string, port int) (*DfxConnector, error) {
 func NewDfxConnector(perunID, ledgerID, pemAccountPath, host string, port int) *Connector {
 
 	dfxAgent, err := NewDfxAgent(pemAccountPath, host, port)
@@ -46,12 +42,12 @@ func NewDfxConnector(perunID, ledgerID, pemAccountPath, host string, port int) *
 
 	dfxAccount := dfxAgent.Sender()
 
-	recipPerunID, err := utils.DecodePrincipal(perunID)
+	recipPerunID, err := DecodePrincipal(perunID)
 	if err != nil {
 		panic(err)
 	}
 
-	recipLedgerID, err := utils.DecodePrincipal(ledgerID)
+	recipLedgerID, err := DecodePrincipal(ledgerID)
 	if err != nil {
 		panic(err)
 	}
@@ -181,7 +177,7 @@ func NewLedgerAgent(canID principal.Principal, accountPath, host string, port in
 
 func (f *Funding) Memo() (Memo, error) {
 
-	hasher := sha512.New() // Assuming Hash::digest uses SHA-512.
+	hasher := sha512.New()
 
 	chanBytes := f.Channel[:]
 	addrBytes := f.Part[:]

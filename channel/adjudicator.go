@@ -29,15 +29,6 @@ type Adjudicator struct {
 	maxIters     int
 }
 
-var (
-	// ErrConcludedDifferentVersion a channel was concluded with a different version.
-	ErrConcludedDifferentVersion = errors.New("channel was concluded with a different version")
-	// ErrAdjudicatorReqIncompatible the adjudicator request was not compatible.
-	ErrAdjudicatorReqIncompatible = errors.New("adjudicator request was not compatible")
-	// ErrAdjudicatorReqIncompatible the adjudicator request was not compatible.
-	ErrReqVersionTooLow = errors.New("request version too low")
-)
-
 // NewAdjudicator returns a new Adjudicator.
 func NewAdjudicator(acc wallet.Account, c *chanconn.Connector) *Adjudicator {
 	return &Adjudicator{
@@ -76,7 +67,7 @@ func (a *Adjudicator) Register(ctx context.Context, req pchannel.AdjudicatorReq,
 	return nil
 }
 
-// Progress returns an error because app channels are currently not supported.
+// Progress returns nil because app channels are currently not supported.
 func (a *Adjudicator) Progress(ctx context.Context, req pchannel.ProgressReq) error {
 
 	return nil
@@ -155,12 +146,12 @@ func (a *Adjudicator) isConcluded(ctx context.Context, cid pchannel.ID, req pcha
 
 	}
 
-	cc, err := a.conn.PerunAgent.Conclude(adjReq)
+	concludeResp, err := a.conn.PerunAgent.Conclude(adjReq)
 	if err != nil {
 		return false, ErrFailConclude
 	}
 
-	if cc == ResponseErrorConcludingChannel {
+	if concludeResp == ResponseErrorConcludingChannel {
 		// calling conclusion failed: Look for a conclusion event that has been emitted by the other participant
 
 		matched, err := a.queryAndMatchEvents(ctx, cid, req.Tx.State.Version)
@@ -211,7 +202,7 @@ func (a *Adjudicator) queryAndMatchEvents(ctx context.Context, cid pchannel.ID, 
 	return false, nil // Return false if no match found
 }
 
-func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.AdjudicatorReq, nonce [32]byte) error {
+func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.AdjudicatorReq, nonce chanconn.Nonce) error {
 
 	// check for disputes: if there are disputes for a non-finalized state, we need to verify everything and then conclude
 	cid := req.Params.ID()
@@ -222,7 +213,7 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 	}
 
 	if qs == nil {
-		return fmt.Errorf("failed to fetch dispute and channel is not concludable yet: %w", err)
+		return fmt.Errorf("failed to fetch registered state (dispute) and channel is not concludable yet: %w", err)
 	}
 
 	if qs.State.Version > req.Tx.Version {
@@ -238,7 +229,7 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 
 		parts, err := MakeParts(req.Params.Parts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to make parts: %w", err)
+			return nil, err
 		}
 		alloc := MakeAlloc(req.Tx.State.Allocation.Balances)
 
@@ -314,17 +305,16 @@ func (a *Adjudicator) ensureConcluded(ctx context.Context, req pchannel.Adjudica
 
 	concludeFinal := req.Tx.State.IsFinal && fullySignedTx(req.Tx, req.Params.Parts) == nil
 
-	nonce := req.Params.Nonce
-	nonce32Bytes, err := chanconn.MakeNonce(nonce)
+	nonce, err := chanconn.MakeNonce(req.Params.Nonce)
 	if err != nil {
-		return false, fmt.Errorf("failed to make nonce: %w", err)
+		return false, err
 	}
 
 	if concludeFinal {
 		// if concludeFinal is true, then we can conclude the channel if it has not been concluded already
 		chanConcluded, err := a.isConcluded(ctx, cid, req)
 		if err != nil {
-			return false, fmt.Errorf("failed to check if channel is concluded: %w", err)
+			return false, err
 		}
 
 		if chanConcluded {
@@ -334,9 +324,9 @@ func (a *Adjudicator) ensureConcluded(ctx context.Context, req pchannel.Adjudica
 
 	} else {
 		// channel is not concludable, so we need to dispute and check disputed states
-		err := a.checkDisputes(ctx, req, nonce32Bytes)
+		err := a.checkDisputes(ctx, req, nonce)
 		if err != nil {
-			return false, fmt.Errorf("failed to check disputes: %w", err)
+			return false, err
 		}
 
 	}
@@ -353,13 +343,11 @@ func (a *Adjudicator) MakeWithdrawalReq(req pchannel.AdjudicatorReq) (icperun.Wi
 	}
 	receiver := a.conn.L1Account
 
-	cidBytes := cid[:]
-	partBytes := addrSlice[:]
 	receiverBytes := receiver.Raw
 	var msgEnc []byte
 
-	msgEnc = append(msgEnc, cidBytes...)
-	msgEnc = append(msgEnc, partBytes...)
+	msgEnc = append(msgEnc, cid[:]...)
+	msgEnc = append(msgEnc, addrSlice[:]...)
 	msgEnc = append(msgEnc, receiverBytes...)
 
 	sig, err := a.acc.SignData(msgEnc)
@@ -386,9 +374,9 @@ func (a *Adjudicator) withdraw(ctx context.Context, req pchannel.AdjudicatorReq,
 		return fmt.Errorf("failed to withdraw: %w", err)
 	}
 
-	withdrawErr1, err := a.conn.PerunAgent.Withdraw(withdrawReq)
+	withdrawalResp, err := a.conn.PerunAgent.Withdraw(withdrawReq)
 
-	if withdrawErr1 != "successful withdrawal" {
+	if withdrawalResp != WithdrawalSuccessResponse {
 		return ErrFailWithdrawal
 	}
 
@@ -449,7 +437,6 @@ func MakeAdjReq(req pchannel.AdjudicatorReq) (icperun.AdjRequest, error) {
 
 }
 
-// func (a *Adjudicator) withdraw(ctx context.Context, req pchannel.AdjudicatorReq, finalized bool, cid64Bytes [64]byte, addrSlice []byte) error {
 func (a *Adjudicator) dispute(ctx context.Context, req pchannel.AdjudicatorReq, cid pchannel.ID) error {
 	defer a.log.Log().Trace("Dispute done")
 
@@ -458,12 +445,8 @@ func (a *Adjudicator) dispute(ctx context.Context, req pchannel.AdjudicatorReq, 
 		return fmt.Errorf("failed to make adjudicator arguments: %w", err)
 	}
 
-	disputeErr1, err := a.conn.PerunAgent.Dispute(disputeArgs)
-	if err != nil {
-		return fmt.Errorf("failed to call dispute: %w", err)
-
-	}
-	if disputeErr1 != "successful initialization of a dispute" {
+	disputeResp, err := a.conn.PerunAgent.Dispute(disputeArgs)
+	if err != nil || disputeResp != DisputeSuccess {
 		return ErrFailDispute
 	}
 

@@ -67,8 +67,6 @@ func (c *PaymentClient) OpenChannel(peer wire.Address, amount float64) { //*Paym
 	// We define the channel participants. The proposer has always index 0. Here
 	// we use the on-chain addresses as off-chain addresses, but we could also
 	// use different ones.
-	//waddr := *icwallet.AsAddr(c.WireAddress())
-	//wireaddr := &wire.Address{Address: &waddr}
 
 	participants := []wire.Address{c.WireAddress(), peer}
 

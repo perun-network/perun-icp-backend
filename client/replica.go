@@ -4,7 +4,6 @@ import (
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
 	"math/big"
-	//"perun.network/perun-icp-backend/setup"
 )
 
 func (p *PaymentClient) GetOwnBalance() *big.Int {
@@ -28,19 +27,3 @@ func (p *PaymentClient) GetExtBalance(extPrince principal.Principal) uint64 {
 	}
 	return uint64(balance.E8s)
 }
-
-// const transferFee = 10000
-
-// func NewReplica() *setup.DfxSetup {
-
-// 	demoConfig := setup.DfxConfig{
-// 		Host:        "http://127.0.0.1",
-// 		Port:        4943,
-// 		ExecPath:    "./test/testdata/",
-// 		AccountPath: "./test/testdata/identities/minter_identity.pem",
-// 	}
-
-// 	dfx := setup.NewDfxSetup(demoConfig)
-
-// 	return dfx
-// }

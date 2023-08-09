@@ -81,24 +81,3 @@ func MixBals(rng io.Reader, bals []pchannel.Bal) {
 		bals[to].Add(bals[to], diff)
 	}
 }
-
-// func (*backend) Sign(acc pwallet.Account, state *pchannel.State) (pwallet.Sig, error) {
-// 	// Provide signature to the state such that the canister can verify it on-chain.
-// 	stateCan, err := chanconn.StateForChain(state)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	var stateBytes []byte
-
-// 	stateBytes = append(stateBytes, stateCan.Channel[:]...)
-// 	stateBytes = append(stateBytes, Uint64ToBytes(stateCan.Version)...)
-// 	for _, a := range stateCan.Balances {
-// 		myBigInt := big.NewInt(0).SetUint64(a)
-// 		stateBytes = append(stateBytes, BigToLittleEndianBytes(myBigInt)...)
-// 	}
-
-// 	stateBytes = append(stateBytes, BoolToBytes(stateCan.Final)...)
-
-// 	return acc.SignData(stateBytes)
-// }

@@ -1,20 +1,16 @@
 package icperun
 
 import (
-	//"encoding/json"
 	"github.com/aviate-labs/agent-go"
 	"github.com/aviate-labs/agent-go/candid/idl"
 	"github.com/aviate-labs/agent-go/principal"
 	"math/big"
 )
 
-// Agent is a client for the "perun" canister.
 type Agent struct {
 	a          *agent.Agent
 	canisterId principal.Principal
 }
-
-type Amount = idl.Nat
 
 func NewBigNat(b *big.Int) Amount {
 	return idl.NewBigNat(b)
@@ -22,10 +18,14 @@ func NewBigNat(b *big.Int) Amount {
 
 type ChannelId = [32]byte
 type Signature = Hash
-
+type Amount = idl.Nat
 type Duration = uint64
-
 type Error = string
+type Hash = []uint8
+type L2Account = []uint8
+type EventTxt = string
+type Nonce = [32]byte
+type Timestamp = uint64
 
 type FullySignedState = struct {
 	State State    `ic:"state"`
@@ -42,16 +42,6 @@ type Funding = struct {
 	Channel     ChannelId `ic:"channel"`
 	Participant L2Account `ic:"participant"`
 }
-
-type NotifyInput = struct {
-	Notify uint64 `ic:"notify"`
-}
-
-type Hash = []uint8
-
-type L2Account = []uint8
-
-type Nonce = [32]byte
 
 type Params = struct {
 	Nonce             Nonce       `ic:"nonce"`
@@ -70,8 +60,6 @@ type State = struct {
 	Allocation []Amount  `ic:"allocation"`
 	Finalized  bool      `ic:"finalized"`
 }
-
-type Timestamp = uint64
 
 type WithdrawalRequest = struct {
 	Channel     ChannelId           `ic:"channel"`
@@ -97,14 +85,11 @@ type Event = struct {
 	total Amount    `ic:"total"`
 }
 
-type EventTxt = string
-
 type ChannelTime = struct {
 	Channel   ChannelId `ic:"chanid"`
 	Timestamp Timestamp `ic:"time"`
 }
 
-// NewAgent creates a new agent for the "perun" canister.
 func NewAgent(canisterId principal.Principal, config agent.Config) (*Agent, error) {
 	a, err := agent.New(config)
 	if err != nil {
@@ -133,7 +118,6 @@ func (a Agent) Conclude(arg0 AdjRequest) (Error, error) {
 	return r0, nil
 }
 
-// Dispute calls the "dispute" method on the "perun" canister.
 func (a Agent) Dispute(arg0 AdjRequest) (Error, error) {
 	args, err := idl.Marshal([]any{arg0})
 	if err != nil {
@@ -151,7 +135,6 @@ func (a Agent) Dispute(arg0 AdjRequest) (Error, error) {
 	return r0, nil
 }
 
-// QueryHoldings calls the "query_holdings" method on the "perun" canister.
 func (a Agent) QueryHoldings(arg0 Funding) (**Amount, error) {
 	args, err := idl.Marshal([]any{arg0})
 	if err != nil {
@@ -188,7 +171,6 @@ func (a Agent) QueryEvents(arg0 ChannelTime) (EventTxt, error) {
 	return r0, nil
 }
 
-// QueryState calls the "query_state" method on the "perun" canister.
 func (a Agent) QueryState(arg0 ChannelId) (*RegisteredState, error) {
 	args, err := idl.Marshal([]any{arg0})
 	if err != nil {
@@ -206,7 +188,6 @@ func (a Agent) QueryState(arg0 ChannelId) (*RegisteredState, error) {
 	return r0, nil
 }
 
-// TransactionNotification calls the "transaction_notification" method on the "perun" canister.
 func (a Agent) TransactionNotification(arg0 uint64) (**Amount, error) {
 	args, err := idl.Marshal([]any{arg0})
 	if err != nil {
@@ -224,7 +205,6 @@ func (a Agent) TransactionNotification(arg0 uint64) (**Amount, error) {
 	return &r0, nil
 }
 
-// Withdraw calls the "withdraw" method on the "perun" canister.
 func (a Agent) Withdraw(arg0 WithdrawalRequest) (Error, error) {
 	args, err := idl.Marshal([]any{arg0})
 	if err != nil {
@@ -242,7 +222,6 @@ func (a Agent) Withdraw(arg0 WithdrawalRequest) (Error, error) {
 	return r0, nil
 }
 
-// DePositMemo calls the "deposit_memo" method on the "perun" canister.
 func (a Agent) Deposit(arg0 Funding) (*Error, error) {
 	args, err := idl.Marshal([]any{arg0})
 	if err != nil {
@@ -260,7 +239,6 @@ func (a Agent) Deposit(arg0 Funding) (*Error, error) {
 	return &r0, nil
 }
 
-// DePositMemo calls the "deposit_memo" method on the "perun" canister.
 func (a Agent) RegisterEvent(arg0 FundMem) error {
 	args, err := idl.Marshal([]any{arg0})
 	if err != nil {
