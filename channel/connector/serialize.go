@@ -2,10 +2,10 @@
 package connector
 
 import (
+	"errors"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
-
 	"perun.network/perun-icp-backend/wallet"
 )
 
@@ -93,7 +93,18 @@ func MakeAlloc(a *pchannel.Allocation) ([]Balance, error) {
 
 	return ret, err
 }
+func MakeBalance(bal *big.Int) (Balance, error) {
+	if bal.Sign() < 0 {
+		return 0, errors.New("invalid balance: negative value")
+	}
 
+	maxBal := new(big.Int).SetUint64(MaxBalance)
+	if bal.Cmp(maxBal) > 0 {
+		return 0, errors.New("invalid balance: exceeds max balance")
+	}
+
+	return Balance(bal.Uint64()), nil
+}
 func StateForChain(s *pchannel.State) (*State, error) {
 	if err := s.Valid(); err != nil {
 		return nil, ErrStateIncompatible

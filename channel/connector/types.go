@@ -26,14 +26,6 @@ const (
 	MaxBalance = uint64(1) << 30
 )
 
-type DisputePhase = uint8
-
-const (
-	RegisterPhase DisputePhase = iota
-	ProgressPhase
-	ConcludePhase
-)
-
 type (
 	// Nonce makes a channels ID unique by providing randomness to the params.
 	Nonce = [NonceLen]byte
@@ -101,15 +93,5 @@ type (
 		Channel ChannelID
 		// Part is the participant who wants to fund.
 		Part OffIdentity
-	}
-
-	// RegisteredState is a channel state that was registered on-chain.
-	RegisteredState struct {
-		// Phase is the phase of the dispute.
-		Phase DisputePhase
-		// State is the state of the channel.
-		State State
-		// Timeout is the duration that the dispute can be refuted in.
-		Timeout ChallengeDuration
 	}
 )

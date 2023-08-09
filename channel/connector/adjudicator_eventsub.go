@@ -2,25 +2,20 @@ package connector
 
 import (
 	"fmt"
-
+	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
 	pkgsync "polycry.pt/poly-go/sync"
-	"regexp"
-	"strconv"
-
 	"time"
-
-	pchannel "perun.network/go-perun/channel"
 )
 
-// make a predecessor to the real go-perun AdjEvent interface
+// predecessor to the go-perun AdjEvent interface
 type AdjEvent interface {
 	SetData(cid pchannel.ID, version uint64, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error
 	ID() pchannel.ID
 	Timeout() pchannel.Timeout
-	Version() uint64
+	Version() Version
 	Tstamp() uint64
 }
 
@@ -70,85 +65,10 @@ func parseEventsDisputed(input string) ([]DisputedEvent, error) {
 	return []DisputedEvent{event}, nil
 }
 
-func parseAdjEvents(input string, event AdjEvent,
-	channelIDPattern, versionPattern, finalizedPattern, allocPattern, timeoutPattern, timestampPattern string) error {
-
-	rptChannelID := regexp.MustCompile(channelIDPattern)
-	rptVersion := regexp.MustCompile(versionPattern)
-	rptFinalized := regexp.MustCompile(finalizedPattern)
-	rptAlloc := regexp.MustCompile(allocPattern)
-	rptTimeout := regexp.MustCompile(timeoutPattern)
-	rptTimestamp := regexp.MustCompile(timestampPattern)
-
-	matchesChannelID := rptChannelID.FindAllStringSubmatch(input, -1)
-	matchesVersion := rptVersion.FindAllStringSubmatch(input, -1)
-	matchesFinalized := rptFinalized.FindAllStringSubmatch(input, -1)
-	matchesAlloc := rptAlloc.FindAllStringSubmatch(input, -1)
-	matchesTimeout := rptTimeout.FindAllStringSubmatch(input, -1)
-	matchesTimestamp := rptTimestamp.FindAllStringSubmatch(input, -1)
-
-	if matchesChannelID == nil || matchesVersion == nil || matchesFinalized == nil || matchesAlloc == nil || matchesTimeout == nil || matchesTimestamp == nil {
-		return nil
-	}
-
-	if len(matchesChannelID) == 0 {
-		return nil
-	}
-
-	var maxVersionIdx int
-
-	if len(matchesChannelID) == 1 {
-		maxVersionIdx = 0
-	}
-
-	if len(matchesChannelID) != 1 {
-
-		maxVersionIdx = findMaxVersionIndex(matchesVersion)
-
-	}
-
-	cid, err := parseChannelID(matchesChannelID[maxVersionIdx][1])
-	if err != nil {
-		return err
-	}
-
-	version, err := strconv.ParseUint(matchesVersion[maxVersionIdx][1], 10, 64)
-	if err != nil {
-		return err
-	}
-
-	finalized, err := strconv.ParseBool(matchesFinalized[maxVersionIdx][1])
-	if err != nil {
-		return err
-	}
-
-	alloc1, alloc2, err := parseAllocations(matchesAlloc[maxVersionIdx][1], matchesAlloc[maxVersionIdx][2])
-	if err != nil {
-		return err
-	}
-
-	timeout, err := strconv.ParseUint(matchesTimeout[maxVersionIdx][1], 10, 64)
-	if err != nil {
-		return err
-	}
-
-	timestamp, err := strconv.ParseUint(matchesTimestamp[maxVersionIdx][1], 10, 64)
-	if err != nil {
-		return err
-	}
-
-	err = event.SetData(cid, version, finalized, [2]uint64{alloc1, alloc2}, timeout, timestamp) //timeout
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func parseEventsAll(input string) ([]AdjEvent, error) {
 
 	var concEvents []ConcludedEvent
 	var dispEvents []DisputedEvent
-
 	var adjEvents []AdjEvent
 
 	concEvents, err := parseEventsConcluded(input)
@@ -162,11 +82,10 @@ func parseEventsAll(input string) ([]AdjEvent, error) {
 	}
 
 	for _, event := range concEvents {
-
 		adjEvents = append(adjEvents, &event)
 	}
-	for _, event := range dispEvents {
 
+	for _, event := range dispEvents {
 		adjEvents = append(adjEvents, &event)
 	}
 

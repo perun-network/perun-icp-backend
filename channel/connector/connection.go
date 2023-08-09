@@ -5,7 +5,6 @@ package connector
 import (
 	"crypto/sha512"
 	"encoding/binary"
-	"errors"
 	"fmt"
 
 	"github.com/aviate-labs/agent-go"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/aviate-labs/agent-go/identity"
 	"github.com/aviate-labs/agent-go/principal"
-	"math/big"
 	"net/url"
 	"os"
 	"perun.network/go-perun/log"
@@ -89,12 +87,7 @@ func NewIdentity(accountPath string) (*identity.Identity, error) {
 }
 
 func NewDfxAgent(accountPath string, host string, port int) (*agent.Agent, error) {
-	data, err := os.ReadFile(accountPath)
-	if err != nil {
-		return nil, err
-	}
-	var agentID identity.Identity
-	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
+	agentID, err := NewIdentity(accountPath)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +97,7 @@ func NewDfxAgent(accountPath string, host string, port int) (*agent.Agent, error
 	}
 
 	agent, err := agent.New(agent.Config{
-		Identity: agentID,
+		Identity: *agentID,
 		ClientConfig: &agent.ClientConfig{
 			Host: ic0,
 		},
@@ -118,12 +111,7 @@ func NewDfxAgent(accountPath string, host string, port int) (*agent.Agent, error
 }
 
 func NewPerunAgent(canID principal.Principal, accountPath, host string, port int) (*icperun.Agent, error) {
-	data, err := os.ReadFile(accountPath)
-	if err != nil {
-		return nil, err
-	}
-	var agentID identity.Identity
-	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
+	agentID, err := NewIdentity(accountPath)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +121,7 @@ func NewPerunAgent(canID principal.Principal, accountPath, host string, port int
 	}
 
 	agent, err := icperun.NewAgent(canID, agent.Config{
-		Identity: agentID,
+		Identity: *agentID,
 		ClientConfig: &agent.ClientConfig{
 			Host: ic0,
 		},
@@ -147,12 +135,7 @@ func NewPerunAgent(canID principal.Principal, accountPath, host string, port int
 }
 
 func NewLedgerAgent(canID principal.Principal, accountPath, host string, port int) (*icpledger.Agent, error) {
-	data, err := os.ReadFile(accountPath)
-	if err != nil {
-		return nil, err
-	}
-	var agentID identity.Identity
-	agentID, err = identity.NewSecp256k1IdentityFromPEM(data)
+	agentID, err := NewIdentity(accountPath)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +145,7 @@ func NewLedgerAgent(canID principal.Principal, accountPath, host string, port in
 	}
 
 	agent, err := icpledger.NewAgent(canID, agent.Config{
-		Identity: agentID,
+		Identity: *agentID,
 		ClientConfig: &agent.ClientConfig{
 			Host: ic0,
 		},
@@ -193,17 +176,4 @@ func (f *Funding) Memo() (Memo, error) {
 	memo := binary.LittleEndian.Uint64(arr[:])
 
 	return memo, nil
-}
-
-func MakeBalance(bal *big.Int) (Balance, error) {
-	if bal.Sign() < 0 {
-		return 0, errors.New("invalid balance: negative value")
-	}
-
-	maxBal := new(big.Int).SetUint64(MaxBalance)
-	if bal.Cmp(maxBal) > 0 {
-		return 0, errors.New("invalid balance: exceeds max balance")
-	}
-
-	return Balance(bal.Uint64()), nil
 }

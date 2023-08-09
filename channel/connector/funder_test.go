@@ -10,8 +10,6 @@ import (
 
 	"github.com/aviate-labs/agent-go/principal"
 
-	"perun.network/perun-icp-backend/channel"
-
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/test"
 
@@ -64,13 +62,6 @@ func TestTransferToLedger(t *testing.T) {
 
 	_, err = aliceLedger.AccountBalance(icpledger.AccountBalanceArgs{Account: toAccount})
 	require.NoError(t, err, "Failed to get account balance")
-}
-
-func TestQueryPerunCanister(t *testing.T) {
-	perunID := "be2us-64aaa-aaaaa-qaabq-cai"
-	err := channel.QueryCandidCLI("()", perunID, "./../../userdata/")
-	require.NoError(t, err, "Failed to query Perun ID")
-
 }
 
 func TestDeposit(t *testing.T) {

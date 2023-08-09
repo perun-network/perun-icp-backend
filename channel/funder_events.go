@@ -4,7 +4,6 @@ package channel
 
 import (
 	"fmt"
-	"os/exec"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/perun-icp-backend/wallet"
 	"regexp"
@@ -107,22 +106,4 @@ func EvaluateFundedEvents(events []FundedEvent, funderAddr wallet.Address, freqA
 	}
 
 	return false, nil
-}
-
-func QueryCandidCLI(queryStateArgs string, canID string, execPath string) error {
-	// Query the state of the Perun canister
-
-	path, err := exec.LookPath("dfx")
-	if err != nil {
-		return fmt.Errorf("unable to find 'dfx' executable in the system PATH: %w", err)
-	}
-
-	txCmd := exec.Command(path, "canister", "call", canID, "__get_candid_interface_tmp_hack", queryStateArgs)
-	txCmd.Dir = execPath
-	output, err := txCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to query canister state: %w\nOutput: %s", err, output)
-	}
-
-	return nil
 }

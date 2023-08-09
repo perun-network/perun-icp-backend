@@ -12,10 +12,6 @@ type Agent struct {
 	canisterId principal.Principal
 }
 
-func NewBigNat(b *big.Int) Amount {
-	return idl.NewBigNat(b)
-}
-
 type ChannelId = [32]byte
 type Signature = Hash
 type Amount = idl.Nat
@@ -88,6 +84,10 @@ type Event = struct {
 type ChannelTime = struct {
 	Channel   ChannelId `ic:"chanid"`
 	Timestamp Timestamp `ic:"time"`
+}
+
+func NewBigNat(b *big.Int) Amount {
+	return idl.NewBigNat(b)
 }
 
 func NewAgent(canisterId principal.Principal, config agent.Config) (*Agent, error) {

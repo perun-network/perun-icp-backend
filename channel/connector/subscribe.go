@@ -32,14 +32,6 @@ type AdjEventSub struct {
 	pollInterval time.Duration
 }
 
-type EventSource struct {
-	sink chan AdjEvent
-}
-
-func (e *EventSource) Events() <-chan AdjEvent {
-	return e.sink
-}
-
 func (e *AdjEventSub) GetEvents() <-chan AdjEvent {
 	return e.events
 }
@@ -68,7 +60,7 @@ func NewAdjudicatorSub(ctx context.Context, cid pchannel.ID, conn *Connector) *A
 }
 
 func (s *AdjEventSub) run(ctx context.Context) {
-	s.log.Log().Info("EventSource Listening started from start time")
+	s.log.Log().Info("Event listening started from start time")
 	finish := func(err error) {
 		s.err = err
 		close(s.events)
@@ -90,25 +82,21 @@ polling:
 				s.panicErr <- err
 			}
 
-			// Check if eventStr is empty
 			if eventStr == "" {
 				s.log.Log().Debug("No events yet, continuing polling...")
 				continue polling
-
-				// here TODO implement elseif for a funded event
 
 			} else {
 				s.log.Log().Debug("Event detected, evaluating events...")
 
 				// Parse the events
 
-				adjEvents, err := parseEventsAll(eventStr) //Concluded(eventStr)
+				adjEvents, err := parseEventsAll(eventStr)
 				if err != nil {
 					s.panicErr <- errors.Wrap(err, "failed to parse events during polling")
 				}
 
 				if len(adjEvents) == 0 {
-					//s.log.Log().Warn("No events detected but, continuing polling...")
 					continue polling
 				}
 
@@ -168,7 +156,6 @@ func (s *AdjEventSub) Next() pchannel.AdjudicatorEvent {
 			s.closer.Close()
 			return ccn
 		default:
-			// ot an unknown event type
 			return nil
 		}
 
