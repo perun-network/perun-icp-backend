@@ -116,7 +116,7 @@ polling:
 
 func makeTimeoutErr(remains pchannel.Index) error {
 	indices := make([]pchannel.Index, 0, 1)
-	indices = append(indices, 0)
+	indices = append(indices, remains)
 	return pchannel.NewFundingTimeoutError(
 		[]*pchannel.AssetFundingError{{
 			Asset:         Asset.Index(),

@@ -1,7 +1,6 @@
 package client
 
 import (
-	//"context"
 	"log"
 	"math/big"
 	"strconv"
@@ -20,14 +19,6 @@ func bigIntToFloat64(bi *big.Int) float64 {
 	return f64
 }
 
-// ShannonToCKByte converts a given amount in Shannon to CKByte.
-func ShannonToCKByte(shannonAmount *big.Int) (adaAmount *big.Float) {
-	shannonPerCKByte := new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
-	shannonPerCKByteFloat := new(big.Float).SetInt(shannonPerCKByte)
-	shannonAmountFloat := new(big.Float).SetInt(shannonAmount)
-	return new(big.Float).Quo(shannonAmountFloat, shannonPerCKByteFloat)
-}
-
 func (p *PaymentClient) PollBalances() {
 	defer log.Println("PollBalances: stopped")
 	pollingInterval := time.Second
@@ -42,7 +33,7 @@ func (p *PaymentClient) PollBalances() {
 			p.balance = balance
 			bal := p.balance.Int64()
 			p.balanceMutex.Unlock()
-			p.NotifyAllBalance(bal) // TODO: Update demo tui to allow for big.Int balances
+			p.NotifyAllBalance(bal)
 		} else {
 			p.balanceMutex.Unlock()
 		}

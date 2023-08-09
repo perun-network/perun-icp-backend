@@ -3,12 +3,11 @@
 package connector_test
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/require"
+	"log"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
-
 	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/channel"
 	"testing"
@@ -75,11 +74,8 @@ func TestAdjudicator_ConcludeFinal(t *testing.T) {
 
 func TestAdjudicator_Walkthrough(t *testing.T) {
 	s := test.NewPerunSetup(t)
-
 	chanAlloc := uint64(50000)
-
 	userIdx := 0
-
 	req, params, state := newAdjReq(s, chanAlloc, userIdx, 0, false)
 	dSetup := chtest.NewDepositSetup(params, state)
 	adjAliceIdx := 0
@@ -97,7 +93,7 @@ func TestAdjudicator_Walkthrough(t *testing.T) {
 	{
 		// Register non-final state
 
-		fmt.Println("Alice: Register non-final state")
+		log.Println("Alice: Register non-final state")
 
 		require.NoError(t, adjAlice.Register(ctx, req, nil))
 
@@ -110,10 +106,10 @@ func TestAdjudicator_Walkthrough(t *testing.T) {
 		req.Acc = s.L2Accs[adjBobIdx]
 		req.Tx = pchannel.Transaction{State: next, Sigs: sigs}
 		req.Idx = 1
-		fmt.Println("Bob: Register some higher-version non-final state")
+		log.Println("Bob: Register some higher-version non-final state")
 
 		require.NoError(t, adjBob.Register(ctx, req, nil))
-		fmt.Println("Bob: Register/Conclude final state")
+		log.Println("Bob: Register/Conclude final state")
 		// Register final state with higher version
 		next = next.Clone()
 		next.Version++ // increase version to allow progression
@@ -124,7 +120,7 @@ func TestAdjudicator_Walkthrough(t *testing.T) {
 	// Withdraw
 	{
 		// Bob
-		fmt.Println("Bob: Withdraw")
+		log.Println("Bob: Withdraw")
 		require.NoError(t, adjBob.Withdraw(ctx, req, nil))
 
 		// Alice

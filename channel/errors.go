@@ -4,6 +4,8 @@ import (
 	"errors"
 )
 
+const ResponseErrorConcludingChannel = "error concluding the channel"
+
 var (
 	ErrNotFundedInTime         = errors.New("funding not in time")
 	ErrFundingReqIncompatible  = errors.New("incompatible funding request")

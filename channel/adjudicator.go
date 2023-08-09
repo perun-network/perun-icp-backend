@@ -122,8 +122,6 @@ func (a *Adjudicator) waitForConcluded(ctx context.Context, evsub *chanconn.AdjE
 loop:
 	for {
 
-		// here query again for events
-
 		select {
 		case event := <-evsub.Events():
 
@@ -149,7 +147,7 @@ loop:
 
 func (a *Adjudicator) isConcluded(ctx context.Context, cid pchannel.ID, req pchannel.AdjudicatorReq) (bool, error) {
 
-	evSub := chanconn.NewAdjudicatorSub(ctx, cid, a.conn) //a.Subscribe(ctx, cid)
+	evSub := chanconn.NewAdjudicatorSub(ctx, cid, a.conn)
 
 	adjReq, err := MakeAdjReq(req)
 	if err != nil {
@@ -157,78 +155,17 @@ func (a *Adjudicator) isConcluded(ctx context.Context, cid pchannel.ID, req pcha
 
 	}
 
-	// here we simply need to check if there is a disputed events which has expired:
-	// timestamp(now) has to be greater than timestamp(dispute) + challengeDuration
-
 	cc, err := a.conn.PerunAgent.Conclude(adjReq)
 	if err != nil {
-		return false, fmt.Errorf("failed to call conclude: %w", err)
+		return false, ErrFailConclude
 	}
 
-	if cc == "error concluding the channel" {
-		qs, err := a.conn.PerunAgent.QueryState(cid)
-		if err != nil {
-			return false, fmt.Errorf("failed to request a registered state: %w", err)
-		}
+	if cc == ResponseErrorConcludingChannel {
+		// calling conclusion failed: Look for a conclusion event that has been emitted by the other participant
 
-		if qs == nil {
-			queryEventsArgs := icperun.ChannelTime{
-				Channel:   cid,
-				Timestamp: 0,
-			}
-			evString, err := a.conn.PerunAgent.QueryEvents(queryEventsArgs)
-			if err != nil {
-				return false, fmt.Errorf("failed to call query_events: %w", err)
-
-			}
-
-			concEvs, err := chanconn.ParseEventsConcluded(evString)
-			if err != nil {
-				return false, fmt.Errorf("failed to parse event stream: %w", err)
-			}
-
-			for _, ev := range concEvs {
-
-				if ev.VersionV == req.Tx.State.Version && bytes.Equal(ev.IDV[:], cid[:]) { //
-					return true, nil
-				} else {
-					continue
-				}
-
-			}
-
-		}
-
-		if qs.State.Finalized {
-			// State is already finalized, so likely has been already concluded. We look for events
-			queryEventsArgs := icperun.ChannelTime{
-				Channel:   cid,
-				Timestamp: 0,
-			}
-			evString, err := a.conn.PerunAgent.QueryEvents(queryEventsArgs)
-			if err != nil {
-				return false, fmt.Errorf("failed to call query_events: %w", err)
-
-			}
-
-			concEvs, err := chanconn.ParseEventsConcluded(evString)
-			if err != nil {
-				return false, fmt.Errorf("failed to parse event stream: %w", err)
-			}
-
-			if len(concEvs) == 0 {
-				return false, ErrFailConclude
-			}
-
-			for _, ev := range concEvs {
-
-				if ev.VersionV == req.Tx.State.Version && bytes.Equal(ev.IDV[:], cid[:]) {
-					return true, nil
-				} else {
-					continue
-				}
-
-			}
+		matched, err := a.queryAndMatchEvents(ctx, cid, req.Tx.State.Version)
+		if err != nil || matched {
+			return matched, err
 		}
 
 		return false, ErrFailConclude
@@ -246,6 +183,34 @@ func (a *Adjudicator) isConcluded(ctx context.Context, cid pchannel.ID, req pcha
 	return true, nil
 }
 
+func (a *Adjudicator) queryAndMatchEvents(ctx context.Context, cid pchannel.ID, reqVersion uint64) (bool, error) {
+	queryEventsArgs := icperun.ChannelTime{
+		Channel:   cid,
+		Timestamp: 0,
+	}
+	evString, err := a.conn.PerunAgent.QueryEvents(queryEventsArgs)
+	if err != nil {
+		return false, fmt.Errorf("failed to call query_events: %w", err)
+	}
+
+	concEvs, err := chanconn.ParseEventsConcluded(evString)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse event stream: %w", err)
+	}
+
+	if len(concEvs) == 0 {
+		return false, ErrFailConclude
+	}
+
+	for _, ev := range concEvs {
+		if ev.VersionV == reqVersion && bytes.Equal(ev.IDV[:], cid[:]) {
+			return true, nil
+		}
+	}
+
+	return false, nil // Return false if no match found
+}
+
 func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.AdjudicatorReq, nonce [32]byte) error {
 
 	// check for disputes: if there are disputes for a non-finalized state, we need to verify everything and then conclude
@@ -259,7 +224,6 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 	if qs == nil {
 		return fmt.Errorf("failed to fetch dispute and channel is not concludable yet: %w", err)
 	}
-	// disputes state is present, so we need to check its challenge period to conclude it if possible
 
 	if qs.State.Version > req.Tx.Version {
 		return fmt.Errorf("dispute version higher than the requested version")
@@ -298,7 +262,7 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 
 	_, err = a.conn.PerunAgent.Conclude(*concludeArgs)
 	if err != nil {
-		return fmt.Errorf("failed to conclude the channel: %w", err)
+		return ErrFailConclude
 	}
 
 	evSub := chanconn.NewAdjudicatorSub(ctx, cid, a.conn) //a.Subscribe(ctx, cid)
