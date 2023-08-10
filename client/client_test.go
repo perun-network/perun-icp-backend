@@ -1,3 +1,17 @@
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package client_test
 
 import (
@@ -5,66 +19,73 @@ import (
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
 	"github.com/stretchr/testify/require"
-	"log"
 	"math/rand"
+	"path/filepath"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"testing"
 	"time"
 )
 
+const (
+	ledgerID = "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+	perunID  = "be2us-64aaa-aaaaa-qaabq-cai"
+	Host     = "http://127.0.0.1"
+	Port     = 4943
+)
+
 func TestPrincipalTransfers(t *testing.T) {
 	s := SimpleTxSetup(t)
+
+	userBalancesPreTx := make([]uint64, len(s.L1Users))
+
+	perunBalancePreTx, err := s.PerunNode.GetBalance()
+	require.NoError(t, err, "Failed to get balance")
 
 	for i := 0; i < len(s.L1Users); i++ {
 		bal, err := s.L1Users[i].GetBalance()
 		require.NoError(t, err, "Failed to get balance")
 
-		log.Println("Balance before sending: ", *bal)
+		userBalancesPreTx[i] = bal
 	}
 
-	// balances to transfer
-
-	rand.Seed(time.Now().UnixNano()) // Seed the random number generator
+	rand.Seed(time.Now().UnixNano())
 
 	txBalances := make([]uint64, len(s.L1Users))
 	for i := range txBalances {
-		txBalances[i] = uint64(rand.Intn(4001) + 1000) // Assign a random uint64 value between 1000 and 5000
+		txBalances[i] = uint64(rand.Intn(4001) + 1000)
 	}
 
-	ledgerPrincipal := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
-	perunPrincipal := "be2us-64aaa-aaaaa-qaabq-cai"
-
-	perunID, err := principal.Decode(perunPrincipal)
+	perunPrincipal, err := principal.Decode(perunID)
 	require.NoError(t, err, "Failed to decode principal")
-	ledgerID, err := principal.Decode(ledgerPrincipal)
+	ledgerPrincipal, err := principal.Decode(ledgerID)
 	require.NoError(t, err, "Failed to decode principal")
 
-	perunaccountID := perunID.AccountIdentifier(principal.DefaultSubAccount)
+	perunaccountID := perunPrincipal.AccountIdentifier(principal.DefaultSubAccount)
 	txArgsList := make([]icpledger.TransferArgs, len(s.L1Users))
 
 	for i := 0; i < len(s.L1Users); i++ {
-		//fromSubaccount := s.L1Users[i].Prince.AccountIdentifier(principal.DefaultSubAccount).Bytes()
 		toAccount := perunaccountID.Bytes()
-		txArgsList[i] = icpledger.TransferArgs{
-			Memo: uint64(i),
-			Amount: struct {
-				E8s uint64 "ic:\"e8s\""
-			}{E8s: txBalances[i]},
-			Fee: struct {
-				E8s uint64 "ic:\"e8s\""
-			}{E8s: chanconn.DfxTransferFee},
-			//FromSubaccount: &fromSubaccount,
-			To: toAccount,
-		}
+		txArgsList[i] = createTransferArgs(i, toAccount, txBalances[i])
 
-		_, err := s.L1Users[i].TransferDfx(txArgsList[i], ledgerID)
+		_, err := s.L1Users[i].TransferDfx(txArgsList[i], ledgerPrincipal)
 		require.NoError(t, err, "Failed to transfer")
 		_, err = s.L1Users[i].GetBalance()
 		require.NoError(t, err, "Failed to get balance")
 
 	}
-	_, err = s.PerunNode.GetBalance()
+
+	balDiffr := uint64(0)
+
+	for i := 0; i < len(s.L1Users); i++ {
+		bal, err := s.L1Users[i].GetBalance()
+		require.NoError(t, err, "Failed to get balance")
+		balDiffr += bal - userBalancesPreTx[i]
+	}
+
+	perunBalancePostTx, err := s.PerunNode.GetBalance()
 	require.NoError(t, err, "Failed to get balance")
+	require.NoError(t, err, perunBalancePostTx-perunBalancePreTx, balDiffr)
+
 }
 
 func NewL1User(prince *principal.Principal, c *chanconn.Connector) *L1User {
@@ -97,17 +118,16 @@ type L1User struct {
 	Conn   *chanconn.Connector
 }
 
-func (u *L1User) GetBalance() (*uint64, error) {
+func (u *L1User) GetBalance() (uint64, error) {
 
 	accountID := u.Prince.AccountIdentifier(principal.DefaultSubAccount)
-
 	ledgerAgent := u.Conn.LedgerAgent
 	onChainBal, err := ledgerAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: accountID.Bytes()})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get balance: %v", err)
+		return 0, fmt.Errorf("failed to get balance: %v", err)
 	}
 
-	return &onChainBal.E8s, nil
+	return onChainBal.E8s, nil
 }
 
 func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Principal) (uint64, error) {
@@ -119,21 +139,10 @@ func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Prin
 	}
 
 	if transferResult.Err != nil {
-		switch {
-		case transferResult.Err.BadFee != nil:
-			fmt.Printf("Transfer failed due to bad fee: expected fee: %v\n", transferResult.Err.BadFee.ExpectedFee)
-		case transferResult.Err.InsufficientFunds != nil:
-			fmt.Printf("Transfer failed due to insufficient funds: current balance: %v\n", transferResult.Err.InsufficientFunds.Balance)
-		case transferResult.Err.TxTooOld != nil:
-			fmt.Printf("Transfer failed because the transaction is too old. Allowed window (in nanos): %v\n", transferResult.Err.TxTooOld.AllowedWindowNanos)
-		case transferResult.Err.TxCreatedInFuture != nil:
-			fmt.Println("Transfer failed because the transaction was created in the future.")
-		case transferResult.Err.TxDuplicate != nil:
-			fmt.Printf("Transfer failed because it's a duplicate of transaction at block index: %v\n", transferResult.Err.TxDuplicate.DuplicateOf)
-		default:
-			fmt.Println("Transfer failed due to unknown reasons.")
+		err := chanconn.HandleTransferError(transferResult.Err)
+		if err != nil {
+			return 0, err
 		}
-		return 0, fmt.Errorf("transfer failed with error: %v", transferResult.Err)
 	}
 
 	blnm := transferResult.Ok
@@ -142,6 +151,18 @@ func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Prin
 	}
 
 	return *blnm, nil
+}
+func createTransferArgs(i int, toAccount []byte, txBalance uint64) icpledger.TransferArgs {
+	return icpledger.TransferArgs{
+		Memo: uint64(i),
+		Amount: struct {
+			E8s uint64 "ic:\"e8s\""
+		}{E8s: txBalance},
+		Fee: struct {
+			E8s uint64 "ic:\"e8s\""
+		}{E8s: chanconn.DfxTransferFee},
+		To: toAccount,
+	}
 }
 
 func SimpleTxSetup(t *testing.T) *OnChainBareSetup {
@@ -165,12 +186,11 @@ func SimpleTxSetup(t *testing.T) *OnChainBareSetup {
 
 func TransferSetup(t *testing.T) *L1Setup {
 
-	Host := "http://127.0.0.1"
-	Port := 4943
+	basePath := chanconn.GetBasePath()
 
-	aliceAccPath := "./../userdata/identities/usera_identity.pem"
-	bobAccPath := "./../userdata/identities/userb_identity.pem"
-	minterAccPath := "./../userdata/identities/minter_identity.pem"
+	aliceAccPath := filepath.Join(basePath, "./../userdata/identities/usera_identity.pem")
+	bobAccPath := filepath.Join(basePath, "./../userdata/identities/userb_identity.pem")
+	minterAccPath := filepath.Join(basePath, "./../userdata/identities/minter_identity.pem")
 
 	aliceAcc, err := chanconn.NewIdentity(aliceAccPath)
 	if err != nil {
@@ -189,9 +209,6 @@ func TransferSetup(t *testing.T) *L1Setup {
 	alicePrince := (*aliceAcc).Sender()
 	bobPrince := (*bobAcc).Sender()
 	minterPrince := (*minterAcc).Sender()
-
-	perunID := "be2us-64aaa-aaaaa-qaabq-cai"
-	ledgerID := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
 
 	perunPrince, err := principal.Decode(perunID)
 	if err != nil {

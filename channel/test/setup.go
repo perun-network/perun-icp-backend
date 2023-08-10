@@ -1,13 +1,24 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package test
 
 import (
 	"context"
 	cr "crypto/rand"
-	//"github.com/aviate-labs/agent-go/candid"
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
-	//"github.com/stretchr/testify/require"
 	"math"
 	"math/rand"
 
@@ -15,23 +26,23 @@ import (
 	pchtest "perun.network/go-perun/channel/test"
 	"perun.network/perun-icp-backend/channel"
 
-	//"perun.network/perun-icp-backend/setup"
-	//"perun.network/perun-icp-backend/utils"
-
 	pkgtest "polycry.pt/poly-go/test"
 
-	//pwallet "perun.network/go-perun/wallet"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
 
 	"path/filepath"
 	"perun.network/perun-icp-backend/wallet"
-	"runtime"
 	"testing"
 	"time"
 )
 
-const BlockTime = 0.04
+const (
+	Host     = "http://127.0.0.1"
+	Port     = 4943
+	perunID  = "be2us-64aaa-aaaaa-qaabq-cai"
+	ledgerID = "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+)
 
 var DefaultTestTimeout = 200
 
@@ -47,15 +58,7 @@ func NewRandL2Account() (wallet.Account, error) {
 
 func NewTestSetup(t *testing.T) *Setup {
 
-	Host := "http://127.0.0.1"
-	Port := 4943
-
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("Error determining current file path")
-	}
-
-	basePath := filepath.Dir(filename)
+	basePath := chanconn.GetBasePath()
 
 	aliceAccPath := filepath.Join(basePath, "./../../userdata/identities/usera_identity.pem")
 	bobAccPath := filepath.Join(basePath, "./../../userdata/identities/userb_identity.pem")
@@ -80,9 +83,6 @@ func NewTestSetup(t *testing.T) *Setup {
 	accsL2 := []wallet.Account{aliceL2Acc, bobL2Acc}
 	alicePrince := (*aliceL1Acc).Sender()
 	bobPrince := (*bobL1Acc).Sender()
-
-	perunID := "be2us-64aaa-aaaaa-qaabq-cai"
-	ledgerID := "bkyz2-fmaaa-aaaaa-qaaaq-cai"
 
 	accsL1 := []*principal.Principal{&alicePrince, &bobPrince}
 	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, Host, Port)

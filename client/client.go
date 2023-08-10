@@ -1,4 +1,16 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package client
 
@@ -16,10 +28,8 @@ import (
 	"perun.network/go-perun/wire"
 
 	"math/big"
-	//"perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/channel"
 	icwallet "perun.network/perun-icp-backend/wallet"
-	//icwire "perun.network/perun-icp-backend/wire"
 )
 
 type SharedComm struct {
@@ -29,12 +39,12 @@ type SharedComm struct {
 
 // PaymentClient is a payment channel client.
 type PaymentClient struct {
-	perunClient   *client.Client       // The core Perun client.
-	account       *icwallet.Account    // The account we use for on-chain and off-chain transactions.
-	currency      pchannel.Asset       // The currency we expect to get paid in.
-	channels      chan *PaymentChannel // Accepted payment channels.
-	Channel       *PaymentChannel      // The current payment channel.
-	dfxConn       *chanconn.Connector  // The connector to the Dfx blockchain
+	perunClient   *client.Client
+	account       *icwallet.Account
+	currency      pchannel.Asset
+	channels      chan *PaymentChannel
+	Channel       *PaymentChannel
+	dfxConn       *chanconn.Connector
 	observerMutex sync.Mutex
 	observers     []vc.Observer
 	balanceMutex  sync.Mutex

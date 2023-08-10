@@ -1,3 +1,17 @@
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package connector
 
 import (
@@ -12,7 +26,7 @@ import (
 
 // predecessor to the go-perun AdjEvent interface
 type AdjEvent interface {
-	SetData(cid pchannel.ID, version uint64, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error
+	SetEventData(cid pchannel.ID, version uint64, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error
 	ID() pchannel.ID
 	Timeout() pchannel.Timeout
 	Version() Version
@@ -128,7 +142,7 @@ func EvaluateConcludedEvents(events []ConcludedEvent) (bool, error) {
 	return true, nil
 }
 
-func (e *ConcludedEvent) SetData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
+func (e *ConcludedEvent) SetEventData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
 
 	e.IDV = cid
 	e.VersionV = version
@@ -142,7 +156,7 @@ func (e *ConcludedEvent) SetData(cid pchannel.ID, version Version, finalized boo
 
 }
 
-func (e *DisputedEvent) SetData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
+func (e *DisputedEvent) SetEventData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
 
 	e.IDV = cid
 	e.VersionV = version

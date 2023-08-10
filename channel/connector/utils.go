@@ -1,12 +1,27 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package connector
 
 import (
 	"encoding/hex"
 	"fmt"
 	"github.com/aviate-labs/agent-go/principal"
+	"path/filepath"
 	pchannel "perun.network/go-perun/channel"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -60,7 +75,7 @@ func parseAdjEvents(input string, event AdjEvent,
 		return err
 	}
 
-	return event.SetData(cid, version, finalized, [2]uint64{alloc1, alloc2}, timeout, timestamp) //timeout
+	return event.SetEventData(cid, version, finalized, [2]uint64{alloc1, alloc2}, timeout, timestamp) //timeout
 }
 
 func findMaxVersionIndex(matchesVersion [][]string) int {
@@ -114,4 +129,14 @@ func DecodePrincipal(principalString string) (*principal.Principal, error) {
 		return &principal.Principal{}, fmt.Errorf("error decoding Principal String: %w", err)
 	}
 	return &decPrincipal, nil
+}
+
+func GetBasePath() string {
+	_, filename, _, ok := runtime.Caller(1) // Call depth of 1 to get the caller of this function
+	if !ok {
+		panic("No caller information")
+	}
+
+	basePath := filepath.Dir(filename)
+	return basePath
 }

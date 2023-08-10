@@ -1,3 +1,16 @@
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package main
 
 import (
@@ -5,22 +18,17 @@ import (
 	"os"
 	vc "perun.network/perun-demo-tui/client"
 	"perun.network/perun-demo-tui/view"
-
-	//chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/client"
 	"perun.network/perun-icp-backend/wallet"
 )
 
 const (
-	Host              = "http://127.0.0.1"
-	Port              = 4943
-	perunPrincipal    = "be2us-64aaa-aaaaa-qaabq-cai"
-	ledgerPrincipal   = "bkyz2-fmaaa-aaaaa-qaaaq-cai"
-	userAId           = "97520b79b03e38d3f6b38ce5026a813ccc9d1a3e830edb6df5970e6ca6ad84be"
-	userBId           = "40fd2dc85bc7d264b31f1fa24081d7733d303b49b7df84e3d372338f460aa678"
-	userAPemPath      = "./userdata/identities/usera_identity.pem"
-	userBPemPath      = "./userdata/identities/userb_identity.pem"
-	channelCollateral = 50000
+	Host         = "http://127.0.0.1"
+	Port         = 4943
+	perunID      = "be2us-64aaa-aaaaa-qaabq-cai"
+	ledgerID     = "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+	userAPemPath = "./userdata/identities/usera_identity.pem"
+	userBPemPath = "./userdata/identities/userb_identity.pem"
 )
 
 func SetLogFile(path string) {
@@ -38,74 +46,16 @@ func main() {
 
 	sharedComm := client.InitSharedComm()
 
-	alice, err := client.SetupPaymentClient("alice", perunWltA, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userAPemPath)
+	alice, err := client.SetupPaymentClient("alice", perunWltA, sharedComm, perunID, ledgerID, Host, Port, userAPemPath)
 	if err != nil {
 		panic(err)
 	}
 
-	bob, err := client.SetupPaymentClient("bob", perunWltB, sharedComm, perunPrincipal, ledgerPrincipal, Host, Port, userBPemPath)
+	bob, err := client.SetupPaymentClient("bob", perunWltB, sharedComm, perunID, ledgerID, Host, Port, userBPemPath)
 	if err != nil {
 		panic(err)
 	}
 
-	// alice.OpenChannel(bob.WireAddress(), channelCollateral)
-	// achan := alice.Channel
-	// bob.AcceptedChannel()
-	// bchan := bob.Channel
-
-	// balanceA := alice.GetOwnBalance()
-	// balanceB := bob.GetOwnBalance()
-
-	// log.Println("alice balance: ", balanceA)
-	// log.Println("bob balance: ", balanceB)
-
-	// aliceBal, err := alice.GetChannelBalance()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// bobBal, err := bob.GetChannelBalance()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// log.Println("Perun Canister total balance: ", aliceBal, bobBal)
-
-	// // sending payment/s
-
-	// log.Println("Sending payments...")
-	// achan.SendPayment(1000)
-	// bchan.SendPayment(2000)
-
-	// log.Println("Settling channel")
-	// bchan.Settle()
-
-	// achan.Settle()
-
-	// perunBalAfterSettle, err := alice.GetChannelBalance()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// perunBalBfterSettle, err := bob.GetChannelBalance()
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// log.Println("Perun Canister total balance after Settlement: ", perunBalAfterSettle, perunBalBfterSettle)
-
-	// alice.Shutdown()
-	// bob.Shutdown()
-
-	// recipPerunID, err := chanconn.DecodePrincipal(perunPrincipal)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// perunBal := alice.GetExtBalance(*recipPerunID)
-	// balanceAZ := alice.GetOwnBalance()
-	// balanceBZ := bob.GetOwnBalance()
-
-	// log.Println("alice balance after settlement: ", balanceAZ)
-	// log.Println("bob balance after settlement: ", balanceBZ)
-
-	// log.Println("Perun Canister total balance after Settle: ", perunBal)
 	clients := []vc.DemoClient{alice, bob}
 	_ = view.RunDemo("Internet Computer Payment Channel Demo", clients)
 

@@ -1,83 +1,46 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package connector_test
 
 import (
-	"fmt"
-	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"math/big"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/aviate-labs/agent-go/principal"
-
+	"math/rand"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/test"
-
 	chtest "perun.network/perun-icp-backend/channel/test"
+	"time"
 
 	"testing"
 )
 
-func TestTransferToLedger(t *testing.T) {
-	tSetup := chtest.NewTestSetup(t)
-
-	aliceLedger := tSetup.DfxConns[0].LedgerAgent
-	aliceL1ID := tSetup.L1Accs[0]
-
-	accID := aliceL1ID.AccountIdentifier(principal.DefaultSubAccount)
-
-	_, err := aliceLedger.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
-	require.NoError(t, err, "Failed to get account balance")
-
-	perunID := tSetup.DfxConns[0].PerunID
-	perunaccountID := perunID.AccountIdentifier(principal.DefaultSubAccount)
-	toAccount := perunaccountID.Bytes()
-
-	txArgs := icpledger.TransferArgs{
-		Memo: 1,
-		Amount: struct {
-			E8s uint64 "ic:\"e8s\""
-		}{E8s: 50000},
-		Fee: struct {
-			E8s uint64 "ic:\"e8s\""
-		}{E8s: 10000},
-		To: toAccount,
-	}
-
-	txRes, err := aliceLedger.Transfer(txArgs)
-	if err != nil {
-		t.Fatalf("Failed to transfer: %v", err)
-	}
-
-	if txRes.Err != nil {
-		t.Fatalf("Transfer failed with error: %v", chanconn.HandleTransferError(txRes.Err))
-	} else if txRes.Ok != nil {
-		fmt.Println("BlockIndex: ", *txRes.Ok)
-	} else {
-		fmt.Println("Both BlockIndex and TransferError are nil")
-	}
-
-	_, err = aliceLedger.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
-	require.NoError(t, err, "Failed to get account balance")
-
-	_, err = aliceLedger.AccountBalance(icpledger.AccountBalanceArgs{Account: toAccount})
-	require.NoError(t, err, "Failed to get account balance")
-}
-
-func TestDeposit(t *testing.T) {
+func TestFunding(t *testing.T) {
 	s := test.NewPerunSetup(t)
 
-	chanAlloc := uint64(50000)
+	rand.Seed(time.Now().UnixNano())
+	chanAlloc := uint64(rand.Intn(10000) + 1)
 
 	params, state := s.NewRandomParamAndState()
-	state.Allocation.Balances[0][0] = new(big.Int).SetUint64(chanAlloc)
-	state.Allocation.Balances[0][1] = new(big.Int).SetUint64(chanAlloc)
 
-	funderaddr1 := s.Funders[0].GetAcc().L2Address()
-	funderaddr2 := s.Funders[1].GetAcc().L2Address()
-
-	params.Parts[0] = &funderaddr1
-	params.Parts[1] = &funderaddr2
+	for i := 0; i < len(state.Allocation.Balances[0]); i++ {
+		state.Allocation.Balances[0][i] = new(big.Int).SetUint64(chanAlloc)
+		l2Address := s.Funders[i].GetAcc().L2Address()
+		params.Parts[i] = &l2Address
+	}
 
 	dSetup := chtest.NewDepositSetup(params, state)
 	balsPrev, err := s.GetL1Balances()
@@ -92,8 +55,6 @@ func TestDeposit(t *testing.T) {
 	require.NoError(t, err)
 	perunBalsPost, err := s.GetPerunBalances()
 	require.NoError(t, err)
-
-	// check if balances have arrived exactly
 
 	cid := params.ID()
 	chanBals, err := s.GetChannelBalances(cid)
@@ -112,5 +73,4 @@ func TestDeposit(t *testing.T) {
 		// check that balances in the perun canister is exactly the allocation from both users
 		require.Equal(t, perunBalsPost[i]-perunBalsPrev[i], chanBals[0]+chanBals[1])
 	}
-
 }
