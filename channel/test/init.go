@@ -2,9 +2,9 @@
 package test
 
 import (
-	wtest "github.com/perun-network/perun-icp-backend/wallet/test"
 	pchtest "perun.network/go-perun/channel/test"
 	pwtest "perun.network/go-perun/wallet/test"
+	wtest "perun.network/perun-icp-backend/wallet/test"
 )
 
 func init() {

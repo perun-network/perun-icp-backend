@@ -11,21 +11,21 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/perun-network/perun-icp-backend/channel"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
+	"perun.network/perun-icp-backend/channel"
 
-	//"github.com/perun-network/perun-icp-backend/setup"
-	//"github.com/perun-network/perun-icp-backend/utils"
+	//"perun.network/perun-icp-backend/setup"
+	//"perun.network/perun-icp-backend/utils"
 
 	pkgtest "polycry.pt/poly-go/test"
 
 	//pwallet "perun.network/go-perun/wallet"
-	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
-	"github.com/perun-network/perun-icp-backend/channel/connector/icperun"
+	chanconn "perun.network/perun-icp-backend/channel/connector"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 
-	"github.com/perun-network/perun-icp-backend/wallet"
 	"path/filepath"
+	"perun.network/perun-icp-backend/wallet"
 	"runtime"
 	"testing"
 	"time"

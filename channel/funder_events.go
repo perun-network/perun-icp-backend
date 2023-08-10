@@ -4,8 +4,8 @@ package channel
 
 import (
 	"fmt"
-	"github.com/perun-network/perun-icp-backend/wallet"
 	pchannel "perun.network/go-perun/channel"
+	"perun.network/perun-icp-backend/wallet"
 	"regexp"
 	"strconv"
 	"strings"

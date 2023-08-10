@@ -60,7 +60,7 @@ func parseAdjEvents(input string, event AdjEvent,
 		return err
 	}
 
-	return event.SetEventData(cid, version, finalized, [2]uint64{alloc1, alloc2}, timeout, timestamp) //timeout
+	return event.SetData(cid, version, finalized, [2]uint64{alloc1, alloc2}, timeout, timestamp) //timeout
 }
 
 func findMaxVersionIndex(matchesVersion [][]string) int {

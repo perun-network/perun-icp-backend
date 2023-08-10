@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 
-	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
-	"github.com/perun-network/perun-icp-backend/channel/connector/icperun"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 	pwallet "perun.network/go-perun/wallet"
+	chanconn "perun.network/perun-icp-backend/channel/connector"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 
-	"github.com/perun-network/perun-icp-backend/wallet"
+	"perun.network/perun-icp-backend/wallet"
 
 	"time"
 )

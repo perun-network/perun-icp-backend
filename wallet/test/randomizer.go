@@ -7,7 +7,7 @@ import (
 	pwallet "perun.network/go-perun/wallet"
 	ptest "perun.network/go-perun/wallet/test"
 
-	"github.com/perun-network/perun-icp-backend/wallet"
+	"perun.network/perun-icp-backend/wallet"
 )
 
 // Randomizer implements the wallet/test.Randomizer interface.

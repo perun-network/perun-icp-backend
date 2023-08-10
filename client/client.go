@@ -5,8 +5,8 @@ package client
 import (
 	"context"
 	"fmt"
-	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
-	"github.com/perun-network/perun-icp-backend/channel/connector/icperun"
+	chanconn "perun.network/perun-icp-backend/channel/connector"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 
 	vc "perun.network/perun-demo-tui/client"
 	"sync"
@@ -17,9 +17,9 @@ import (
 
 	"math/big"
 	//"perun.network/go-perun/wallet"
-	"github.com/perun-network/perun-icp-backend/channel"
-	icwallet "github.com/perun-network/perun-icp-backend/wallet"
-	//icwire "github.com/perun-network/perun-icp-backend/wire"
+	"perun.network/perun-icp-backend/channel"
+	icwallet "perun.network/perun-icp-backend/wallet"
+	//icwire "perun.network/perun-icp-backend/wire"
 )
 
 type SharedComm struct {

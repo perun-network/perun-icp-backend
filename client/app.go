@@ -8,10 +8,10 @@ import (
 	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire/net/simple"
 
-	"github.com/perun-network/perun-icp-backend/channel"
-	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
+	"perun.network/perun-icp-backend/channel"
+	chanconn "perun.network/perun-icp-backend/channel/connector"
 
-	"github.com/perun-network/perun-icp-backend/wallet"
+	"perun.network/perun-icp-backend/wallet"
 )
 
 func SetupPaymentClient(

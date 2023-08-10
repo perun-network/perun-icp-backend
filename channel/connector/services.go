@@ -10,9 +10,9 @@ import (
 	// "os/exec"
 	// pchannel "perun.network/go-perun/channel"
 	// pwallet "perun.network/go-perun/wallet"
-	"github.com/perun-network/perun-icp-backend/channel/connector/icperun"
-	//"github.com/perun-network/perun-icp-backend/utils"
-	"github.com/perun-network/perun-icp-backend/wallet"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
+	//"perun.network/perun-icp-backend/utils"
+	"perun.network/perun-icp-backend/wallet"
 	"time"
 )
 

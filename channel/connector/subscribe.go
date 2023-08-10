@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/pkg/errors"
 
-	"github.com/perun-network/perun-icp-backend/channel/connector/icperun"
 	pchannel "perun.network/go-perun/channel"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 	pkgsync "polycry.pt/poly-go/sync"
 
 	"perun.network/go-perun/log"
@@ -88,6 +88,8 @@ polling:
 
 			} else {
 				s.log.Log().Debug("Event detected, evaluating events...")
+
+				// Parse the events
 
 				adjEvents, err := parseEventsAll(eventStr)
 				if err != nil {

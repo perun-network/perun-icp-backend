@@ -3,18 +3,18 @@
 package connector_test
 
 import (
-	"github.com/perun-network/perun-icp-backend/channel"
 	"github.com/stretchr/testify/require"
 	"log"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	pwallet "perun.network/go-perun/wallet"
+	"perun.network/perun-icp-backend/channel"
 	"testing"
 
-	"github.com/perun-network/perun-icp-backend/channel/connector/test"
+	"perun.network/perun-icp-backend/channel/connector/test"
 
-	chtest "github.com/perun-network/perun-icp-backend/channel/test"
+	chtest "perun.network/perun-icp-backend/channel/test"
 )
 
 func TestAdjudicator_Register(t *testing.T) {
