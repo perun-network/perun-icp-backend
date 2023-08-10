@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/aviate-labs/agent-go/ic/icpledger"
 	"github.com/aviate-labs/agent-go/principal"
+	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
 	"github.com/stretchr/testify/require"
 	"log"
 	"math/rand"
-	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"testing"
 	"time"
 )

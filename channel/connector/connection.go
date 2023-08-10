@@ -12,10 +12,10 @@ import (
 
 	"github.com/aviate-labs/agent-go/identity"
 	"github.com/aviate-labs/agent-go/principal"
+	"github.com/perun-network/perun-icp-backend/channel/connector/icperun"
 	"net/url"
 	"os"
 	"perun.network/go-perun/log"
-	"perun.network/perun-icp-backend/channel/connector/icperun"
 	"sync"
 )
 

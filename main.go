@@ -6,9 +6,9 @@ import (
 	vc "perun.network/perun-demo-tui/client"
 	"perun.network/perun-demo-tui/view"
 
-	//chanconn "perun.network/perun-icp-backend/channel/connector"
-	"perun.network/perun-icp-backend/client"
-	"perun.network/perun-icp-backend/wallet"
+	//chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
+	"github.com/perun-network/perun-icp-backend/client"
+	"github.com/perun-network/perun-icp-backend/wallet"
 )
 
 const (

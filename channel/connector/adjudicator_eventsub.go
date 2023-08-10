@@ -2,17 +2,17 @@ package connector
 
 import (
 	"fmt"
+	"github.com/perun-network/perun-icp-backend/channel/connector/icperun"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 	pwallet "perun.network/go-perun/wallet"
-	"perun.network/perun-icp-backend/channel/connector/icperun"
 	pkgsync "polycry.pt/poly-go/sync"
 	"time"
 )
 
 // predecessor to the go-perun AdjEvent interface
 type AdjEvent interface {
-	SetData(cid pchannel.ID, version uint64, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error
+	SetEventData(cid pchannel.ID, version uint64, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error
 	ID() pchannel.ID
 	Timeout() pchannel.Timeout
 	Version() Version
@@ -128,7 +128,7 @@ func EvaluateConcludedEvents(events []ConcludedEvent) (bool, error) {
 	return true, nil
 }
 
-func (e *ConcludedEvent) SetData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
+func (e *ConcludedEvent) SetEventData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
 
 	e.IDV = cid
 	e.VersionV = version
@@ -142,7 +142,7 @@ func (e *ConcludedEvent) SetData(cid pchannel.ID, version Version, finalized boo
 
 }
 
-func (e *DisputedEvent) SetData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
+func (e *DisputedEvent) SetEventData(cid pchannel.ID, version Version, finalized bool, alloc [2]uint64, timeout, timestamp uint64) error {
 
 	e.IDV = cid
 	e.VersionV = version

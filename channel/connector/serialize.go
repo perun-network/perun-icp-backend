@@ -3,10 +3,10 @@ package connector
 
 import (
 	"errors"
+	"github.com/perun-network/perun-icp-backend/wallet"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
-	"perun.network/perun-icp-backend/wallet"
 )
 
 // NewFunding returns a new Funding.

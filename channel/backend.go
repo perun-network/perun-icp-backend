@@ -6,10 +6,10 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"fmt"
+	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
-	chanconn "perun.network/perun-icp-backend/channel/connector"
 )
 
 // backend implements the backend interface.

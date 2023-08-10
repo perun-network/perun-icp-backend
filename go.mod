@@ -1,4 +1,4 @@
-module perun.network/perun-icp-backend
+module github.com/perun-network/perun-icp-backend
 
 go 1.19
 

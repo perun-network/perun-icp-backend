@@ -15,10 +15,10 @@
 package wire
 
 import (
+	"github.com/perun-network/perun-icp-backend/wallet"
 	"math/rand"
-	"perun.network/perun-icp-backend/wallet"
 
-	"perun.network/perun-icp-backend/wallet/test"
+	"github.com/perun-network/perun-icp-backend/wallet/test"
 
 	"perun.network/go-perun/wire"
 )

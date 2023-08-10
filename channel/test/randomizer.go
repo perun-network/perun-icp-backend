@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"math/rand"
 
+	"github.com/perun-network/perun-icp-backend/channel"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
-	"perun.network/perun-icp-backend/channel"
 )
 
 // randomizer implements the channel/test.Randomizer interface.

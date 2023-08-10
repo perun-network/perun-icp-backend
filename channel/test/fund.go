@@ -3,8 +3,8 @@ package test
 
 import (
 	"context"
+	"github.com/perun-network/perun-icp-backend/channel"
 	pchannel "perun.network/go-perun/channel"
-	"perun.network/perun-icp-backend/channel"
 	pkgerrors "polycry.pt/poly-go/errors"
 )
 

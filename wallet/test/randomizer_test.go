@@ -4,8 +4,8 @@ package test_test
 import (
 	"testing"
 
+	test "github.com/perun-network/perun-icp-backend/wallet/test"
 	"github.com/stretchr/testify/require"
-	test "perun.network/perun-icp-backend/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
 )
 

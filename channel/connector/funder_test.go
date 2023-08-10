@@ -10,10 +10,10 @@ import (
 
 	"github.com/aviate-labs/agent-go/principal"
 
-	chanconn "perun.network/perun-icp-backend/channel/connector"
-	"perun.network/perun-icp-backend/channel/connector/test"
+	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
+	"github.com/perun-network/perun-icp-backend/channel/connector/test"
 
-	chtest "perun.network/perun-icp-backend/channel/test"
+	chtest "github.com/perun-network/perun-icp-backend/channel/test"
 
 	"testing"
 )

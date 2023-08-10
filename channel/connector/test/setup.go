@@ -2,21 +2,20 @@
 package test
 
 import (
-	"github.com/stretchr/testify/require"
-	"math/big"
-	"sync"
-	//"fmt"
 	"crypto/rand"
+	"github.com/stretchr/testify/require"
 	"io"
+	"math/big"
 	mrand "math/rand"
 	pchannel "perun.network/go-perun/channel"
+	"sync"
 
 	"perun.network/go-perun/wallet"
 
-	"perun.network/perun-icp-backend/channel"
-	chanconn "perun.network/perun-icp-backend/channel/connector"
+	"github.com/perun-network/perun-icp-backend/channel"
+	chanconn "github.com/perun-network/perun-icp-backend/channel/connector"
 
-	chtest "perun.network/perun-icp-backend/channel/test"
+	chtest "github.com/perun-network/perun-icp-backend/channel/test"
 	"testing"
 )
 
