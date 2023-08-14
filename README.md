@@ -9,6 +9,11 @@ This repository contains the [Dfinity Internet Computer](https://dfinity.org/) b
 
 In the following sections, we will describe how to run Payment Channels on a local instance of the Dfinity Internet Computer.
 
+## [Architecture](#architecture)
+
+<img src="/.assets/icp_backend.png" alt="Project architecture" width="100%"/>
+
+
 
 ## [Installation](#installation)
 
@@ -75,10 +80,10 @@ createLedgerArg() {
 
 This uses the minter account to mint ```10_000_000 ICP``` into the accounts ```usera``` and ```userb```.  The ```ICP_PERUN_MINT_ACC``` ```ICP_PERUN_USERA_ACC``` and ```ICP_PERUN_USERB_ACC``` are the account identifiers of the ```minter```, ```usera``` and ```userb``` identities respectively. You can verify these account identifies by running ```dfx ledger account-id``` for each of the identities. If you want to use other identities, you can simply change the ```ICP_PERUN_MINT_ACC```, ```ICP_PERUN_USERA_ACC``` and ```ICP_PERUN_USERB_ACC``` variables in the ```deploycans.sh``` script so that the ICP is minted into the accounts you want to use.
 
-After successful initialization of the local blockchain, you can now run the demo and the tests. To stop the local blockchain, run the ```stop.sh``` script,
+After successful initialization of the local blockchain, you can now run the demo and the tests. To stop the local blockchain, run the ```stopdfx.sh``` script,
 
 ```sh
-./stop.sh
+./stopdfx.sh
 ```
 
 ## [Payment Channel Demo](#payment~channel~demo)
