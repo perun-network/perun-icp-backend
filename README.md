@@ -1,5 +1,5 @@
 <h1 align="center">
-    <a href="https://perun.network/"><img src=".assets/go_perun.png" alt="Perun" width="30%"></a>
+    <a href="https://perun.network/"><img src=".assets/go-perun.png" alt="Perun" width="30%"></a>
 </h1>
 
 
