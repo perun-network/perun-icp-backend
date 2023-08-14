@@ -1,3 +1,8 @@
+<h1 align="center">
+    <a href="https://perun.network/"><img src=".asset/go_perun.png" alt="Perun" width="30%"></a>
+</h1>
+
+
 # [Perun](https://perun.network/) ICP backend
 
 This repository contains the [Dfinity Internet Computer](https://dfinity.org/) backend for the [go-perun](https://github.com/perun-network/go-perun) channel library. It provides the necessary components to run our secure peer-to-peer Perun Payment Channels on the Dfinity blockchain. The payment channel implementation connects our Perun state machine with the [Perun canister](https://github.com/perun-network/perun-icp-canister), which implements the Perun Payment Channel logic on the Internet Computer. This project is financed through the DFINITY grants program.

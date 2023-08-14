@@ -58,6 +58,6 @@ func main() {
 	}
 
 	clients := []vc.DemoClient{alice, bob}
-	_ = view.RunDemo("Internet Computer Payment Channel Demo", clients)
+	_ = view.RunDemo("Dfinity Internet Computer Payment Channel Demo", clients)
 
 }
