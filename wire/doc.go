@@ -12,8 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package wallet contains the off-chain identity and signature handling of
-// go-perun's internet computer backend. It uses ed25519 keys as identities and
-// the EdDSA signature algorithm. Anonymously import the package from your
-// application to inject the backend into go-perun.
-package wallet
+// Package wire wraps the wallet interface to provide consistency to the go-perun wire package
+package wire
