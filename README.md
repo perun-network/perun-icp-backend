@@ -13,6 +13,16 @@ In the following sections, we will describe how to run Payment Channels on a loc
 
 <img src="/.assets/icp_backend.png" alt="Project architecture" width="100%"/>
 
+### [Project structure](#project~structure)
+
+* `channel/`: Main payment channel component implementation, including the ```Funder``` and ```Adjudicator``` interfaces
+ * `./connector/`: Interface for calling and querying Perun canister functions
+    * `./icperun/`: Perun canister functions
+* `./wallet/` & `./wire/`: Wallet interface enabling the usage of ed25519 keypairs in payment channels
+* `./client`: Building blocks for generation of Perun clients
+* `./userdata`: User-specific data for setting up and running the backend
+* `./main.go`: Main file for running the payment channel demo
+
 
 
 ## [Installation](#installation)
