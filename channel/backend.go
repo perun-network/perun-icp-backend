@@ -17,7 +17,6 @@ package channel
 import (
 	"crypto/sha512"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
@@ -91,7 +90,7 @@ func (*backend) NewAsset() pchannel.Asset {
 func CalcID(params *pchannel.Params) (pchannel.ID, error) {
 	paramsICP, err := chanconn.NewParams(params)
 	if err != nil {
-		return pchannel.ID{}, fmt.Errorf("cannot calculate channel ID: %v", err)
+		panic(err)
 	}
 
 	partsSlices := make([][]byte, len(paramsICP.Participants))
@@ -104,7 +103,7 @@ func CalcID(params *pchannel.Params) (pchannel.ID, error) {
 	}
 
 	if err != nil {
-		return pchannel.ID{}, fmt.Errorf("could not encode parameters: %v", err)
+		panic(err)
 	}
 
 	var paramsEnc []byte
@@ -130,7 +129,7 @@ func CalcID(params *pchannel.Params) (pchannel.ID, error) {
 	IDLen := chanconn.IDLen
 
 	if len(hashSum) < IDLen {
-		return pchannel.ID{}, fmt.Errorf("hash length is less than IDLen")
+		panic(err)
 	}
 
 	var id pchannel.ID
