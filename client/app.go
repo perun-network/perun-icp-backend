@@ -42,7 +42,9 @@ func SetupPaymentClient(
 	acc := w.NewAccount()
 
 	// Connect to Perun pallet and get funder + adjudicator from it.
-	perunConn := chanconn.NewDfxConnector(perunID, ledgerID, accountPath, host, port)
+
+	perunConn := chanconn.NewICConnector(perunID, ledgerID, accountPath, host, port)
+
 	perunConn.Mutex = sharedComm.mutex
 	bus := sharedComm.bus
 
@@ -69,7 +71,7 @@ func SetupPaymentClient(
 		account:     &acc,
 		currency:    channel.Asset,
 		channels:    make(chan *PaymentChannel, 1),
-		dfxConn:     perunConn,
+		ICConn:      perunConn,
 		wAddr:       wireAddr,
 		balance:     big.NewInt(0),
 	}

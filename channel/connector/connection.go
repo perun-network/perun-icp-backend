@@ -34,7 +34,7 @@ import (
 // Connects Perun users with the Internet Computer
 type Connector struct {
 	Log         log.Embedding
-	DfxAgent    *agent.Agent
+	ICAgent     *agent.Agent
 	Mutex       *sync.Mutex
 	PerunID     *principal.Principal
 	LedgerID    *principal.Principal
@@ -43,14 +43,14 @@ type Connector struct {
 	PerunAgent  *icperun.Agent
 }
 
-func NewDfxConnector(perunID, ledgerID, pemAccountPath, host string, port int) *Connector {
+func NewICConnector(perunID, ledgerID, pemAccountPath, host string, port int) *Connector {
 
-	dfxAgent, err := NewDfxAgent(pemAccountPath, host, port)
+	ICAgent, err := NewICAgent(pemAccountPath, host, port)
 	if err != nil {
 		panic(err)
 	}
 
-	dfxAccount := dfxAgent.Sender()
+	ICAccount := ICAgent.Sender()
 
 	recipPerunID, err := DecodePrincipal(perunID)
 	if err != nil {
@@ -72,11 +72,11 @@ func NewDfxConnector(perunID, ledgerID, pemAccountPath, host string, port int) *
 		panic(err)
 	}
 	chanConn := &Connector{
-		DfxAgent:    dfxAgent,
+		ICAgent:     ICAgent,
 		Log:         log.MakeEmbedding(log.Default()),
 		PerunID:     recipPerunID,
 		LedgerID:    recipLedgerID,
-		L1Account:   &dfxAccount,
+		L1Account:   &ICAccount,
 		LedgerAgent: LedgerAgent,
 		PerunAgent:  PerunAgent,
 	}
@@ -98,7 +98,7 @@ func NewIdentity(accountPath string) (*identity.Identity, error) {
 	return &agentID, nil
 }
 
-func NewDfxAgent(accountPath string, host string, port int) (*agent.Agent, error) {
+func NewICAgent(accountPath string, host string, port int) (*agent.Agent, error) {
 	agentID, err := NewIdentity(accountPath)
 	if err != nil {
 		return nil, err

@@ -42,7 +42,7 @@ func TestAdjudicator_Register(t *testing.T) {
 	require.NoError(t, err)
 
 	// initialize adjudicator as user with index 0
-	adj := channel.NewAdjudicator(s.L2Accs[userIdx], s.DfxConns[userIdx])
+	adj := channel.NewAdjudicator(s.L2Accs[userIdx], s.ICConns[userIdx])
 
 	ctx := s.NewCtx()
 
@@ -73,13 +73,13 @@ func TestAdjudicator_ConcludeFinal(t *testing.T) {
 	{
 		// Alice
 		adjIdx := 0
-		adj := channel.NewAdjudicator(s.L2Accs[adjIdx], s.DfxConns[adjIdx])
+		adj := channel.NewAdjudicator(s.L2Accs[adjIdx], s.ICConns[adjIdx])
 		ctx := s.NewCtx()
 		require.NoError(t, adj.Withdraw(ctx, req, nil))
 		withdrawerIdx := 1
 		req.Idx = 1
 		req.Acc = s.L2Accs[withdrawerIdx]
-		adjWithdrawer := channel.NewAdjudicator(s.L2Accs[withdrawerIdx], s.DfxConns[withdrawerIdx])
+		adjWithdrawer := channel.NewAdjudicator(s.L2Accs[withdrawerIdx], s.ICConns[withdrawerIdx])
 		require.NoError(t, adjWithdrawer.Withdraw(ctx, req, nil))
 	}
 }
@@ -91,9 +91,9 @@ func TestAdjudicator_Walkthrough(t *testing.T) {
 	req, params, state := newAdjReq(s, chanAlloc, userIdx, 0, false)
 	dSetup := chtest.NewDepositSetup(params, state)
 	adjAliceIdx := 0
-	adjAlice := channel.NewAdjudicator(s.L2Accs[adjAliceIdx], s.DfxConns[adjAliceIdx])
+	adjAlice := channel.NewAdjudicator(s.L2Accs[adjAliceIdx], s.ICConns[adjAliceIdx])
 	adjBobIdx := 1
-	adjBob := channel.NewAdjudicator(s.L2Accs[adjBobIdx], s.DfxConns[adjBobIdx])
+	adjBob := channel.NewAdjudicator(s.L2Accs[adjBobIdx], s.ICConns[adjBobIdx])
 	ctx := s.NewCtx()
 
 	// Fund

@@ -22,9 +22,9 @@ import (
 
 func (p *PaymentClient) GetOwnBalance() *big.Int {
 
-	l1Principal := p.dfxConn.DfxAgent.Sender()
+	l1Principal := p.ICConn.ICAgent.Sender()
 	l1AccountId := l1Principal.AccountIdentifier(principal.DefaultSubAccount)
-	balance, err := p.dfxConn.LedgerAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: l1AccountId.Bytes()})
+	balance, err := p.ICConn.LedgerAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: l1AccountId.Bytes()})
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func (p *PaymentClient) GetOwnBalance() *big.Int {
 func (p *PaymentClient) GetExtBalance(extPrince principal.Principal) uint64 {
 
 	l1AccountId := extPrince.AccountIdentifier(principal.DefaultSubAccount)
-	balance, err := p.dfxConn.LedgerAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: l1AccountId.Bytes()})
+	balance, err := p.ICConn.LedgerAgent.AccountBalance(icpledger.AccountBalanceArgs{Account: l1AccountId.Bytes()})
 	if err != nil {
 		panic(err)
 	}

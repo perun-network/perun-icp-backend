@@ -34,7 +34,7 @@ const (
 	// Length of a channel ID in byte.
 	IDLen = 32
 	// Fee for transfering on IC
-	DfxTransferFee = 10000
+	ICTransferFee = 10000
 	// MaxBalance is the maximum balance allowed
 	MaxBalance = uint64(1) << 30
 )

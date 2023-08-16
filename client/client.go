@@ -44,7 +44,7 @@ type PaymentClient struct {
 	currency      pchannel.Asset
 	channels      chan *PaymentChannel
 	Channel       *PaymentChannel
-	dfxConn       *chanconn.Connector
+	ICConn        *chanconn.Connector
 	observerMutex sync.Mutex
 	observers     []vc.Observer
 	balanceMutex  sync.Mutex
@@ -151,7 +151,7 @@ func (c *PaymentClient) GetChannelBalance() (*big.Int, error) {
 		Participant: addrBytes,
 	}
 
-	balNat, err := c.dfxConn.PerunAgent.QueryHoldings(queryBalArgs)
+	balNat, err := c.ICConn.PerunAgent.QueryHoldings(queryBalArgs)
 	if err != nil {
 		panic(err)
 	}

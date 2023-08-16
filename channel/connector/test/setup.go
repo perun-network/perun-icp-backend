@@ -39,7 +39,7 @@ type PerunSetup struct {
 func NewPerunSetup(t *testing.T) *PerunSetup {
 
 	s := chtest.NewTestSetup(t)
-	c := s.DfxConns
+	c := s.ICConns
 
 	ret := &PerunSetup{Setup: s}
 

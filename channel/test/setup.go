@@ -85,19 +85,19 @@ func NewTestSetup(t *testing.T) *Setup {
 	bobPrince := (*bobL1Acc).Sender()
 
 	accsL1 := []*principal.Principal{&alicePrince, &bobPrince}
-	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, Host, Port)
-	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, Host, Port)
+	conn1 := chanconn.NewICConnector(perunID, ledgerID, aliceAccPath, Host, Port)
+	conn2 := chanconn.NewICConnector(perunID, ledgerID, bobAccPath, Host, Port)
 
 	conns := []*chanconn.Connector{conn1, conn2}
 	return &Setup{t, pkgtest.Prng(t), accsL1, accsL2, conns}
 }
 
 type Setup struct {
-	T        *testing.T
-	Rng      *rand.Rand
-	L1Accs   []*principal.Principal
-	L2Accs   []wallet.Account
-	DfxConns []*chanconn.Connector
+	T       *testing.T
+	Rng     *rand.Rand
+	L1Accs  []*principal.Principal
+	L2Accs  []wallet.Account
+	ICConns []*chanconn.Connector
 }
 
 type DepositSetup struct {
@@ -177,7 +177,7 @@ func (s *Setup) GetL1Balances() ([]uint64, error) {
 	bals := make([]uint64, len(s.L1Accs))
 
 	for i, acc := range s.L1Accs {
-		l1Ledger := s.DfxConns[i].LedgerAgent
+		l1Ledger := s.ICConns[i].LedgerAgent
 
 		accID := acc.AccountIdentifier(principal.DefaultSubAccount)
 
@@ -197,9 +197,9 @@ func (s *Setup) GetPerunBalances() ([]uint64, error) {
 	bals := make([]uint64, len(s.L1Accs))
 
 	for i := range s.L1Accs {
-		l1Ledger := s.DfxConns[i].LedgerAgent
+		l1Ledger := s.ICConns[i].LedgerAgent
 
-		accID := s.DfxConns[i].PerunID.AccountIdentifier((principal.DefaultSubAccount)) //acc.AccountIdentifier(principal.DefaultSubAccount)
+		accID := s.ICConns[i].PerunID.AccountIdentifier((principal.DefaultSubAccount)) //acc.AccountIdentifier(principal.DefaultSubAccount)
 
 		bal, err := l1Ledger.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
 		if err != nil {
@@ -217,7 +217,7 @@ func (s *Setup) GetChannelBalances(cid pchannel.ID) ([]uint64, error) {
 	bals := make([]uint64, len(s.L2Accs))
 
 	for i, acc := range s.L2Accs {
-		dfxConn := s.DfxConns[i]
+		ICConn := s.ICConns[i]
 		l2Addr, err := acc.Address().MarshalBinary()
 		if err != nil {
 			return nil, err
@@ -225,7 +225,7 @@ func (s *Setup) GetChannelBalances(cid pchannel.ID) ([]uint64, error) {
 		queryBalArgs := icperun.Funding{
 			Channel:     cid,
 			Participant: l2Addr}
-		balNat, err := dfxConn.PerunAgent.QueryHoldings(queryBalArgs)
+		balNat, err := ICConn.PerunAgent.QueryHoldings(queryBalArgs)
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +247,7 @@ func (s *Setup) GetChannelBalances(cid pchannel.ID) ([]uint64, error) {
 
 func (s *Setup) AssertRegistered(cid pchannel.ID) {
 
-	qs, err := s.DfxConns[0].PerunAgent.QueryState(cid)
+	qs, err := s.ICConns[0].PerunAgent.QueryState(cid)
 	if err != nil {
 		s.T.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func (s *Setup) AssertRegistered(cid pchannel.ID) {
 }
 
 func (s *Setup) AssertNoRegistered(cid pchannel.ID) {
-	qs, err := s.DfxConns[0].PerunAgent.QueryState(cid)
+	qs, err := s.ICConns[0].PerunAgent.QueryState(cid)
 	if err != nil {
 		s.T.Fatal(err)
 	}

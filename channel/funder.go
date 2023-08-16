@@ -143,7 +143,7 @@ func (d *Depositor) TransferToPerun(req *DepositReq) (chanconn.BlockNum, error) 
 	if err != nil {
 		return 0, fmt.Errorf("failed to build transfer: %w", err)
 	}
-	blockNum, err := d.cnr.TransferDfx(transferArgs)
+	blockNum, err := d.cnr.TransferIC(transferArgs)
 	if blockNum.Ok == nil {
 		return 0, fmt.Errorf("blockNum is nil")
 	}
@@ -153,11 +153,11 @@ func (d *Depositor) TransferToPerun(req *DepositReq) (chanconn.BlockNum, error) 
 
 func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error { //, cid [32]byte
 
-	// Transfer DFX to the Perun canister with a unique memo.
+	// Transfer IC Tokens to the Perun canister with a unique memo.
 
 	blnm, err := d.TransferToPerun(req)
 	if err != nil {
-		return fmt.Errorf("failed to execute DFX transfer during channel opening: %w", err)
+		return fmt.Errorf("failed to execute IC transfer during channel opening: %w", err)
 	}
 	_, err = d.cnr.NotifyTransferToPerun(blnm, *d.cnr.PerunID)
 
@@ -217,7 +217,7 @@ func NewDepositReqFromPerun(req *pchannel.FundingReq, acc pwallet.Account) (*Dep
 		return nil, ErrFundingReqIncompatible
 	}
 	bal := req.Agreement[0][req.Idx]
-	fee := big.NewInt(chanconn.DfxTransferFee)
+	fee := big.NewInt(chanconn.ICTransferFee)
 	fReq, err := MakeFundingReq(req)
 	if err != nil {
 		return nil, errors.WithMessage(ErrFundingReqIncompatible, err.Error())

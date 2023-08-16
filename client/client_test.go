@@ -67,7 +67,7 @@ func TestPrincipalTransfers(t *testing.T) {
 		toAccount := perunaccountID.Bytes()
 		txArgsList[i] = createTransferArgs(i, toAccount, txBalances[i])
 
-		_, err := s.L1Users[i].TransferDfx(txArgsList[i], ledgerPrincipal)
+		_, err := s.L1Users[i].TransferIC(txArgsList[i], ledgerPrincipal)
 		require.NoError(t, err, "Failed to transfer")
 		_, err = s.L1Users[i].GetBalance()
 		require.NoError(t, err, "Failed to get balance")
@@ -130,12 +130,12 @@ func (u *L1User) GetBalance() (uint64, error) {
 	return onChainBal.E8s, nil
 }
 
-func (u *L1User) TransferDfx(txArgs icpledger.TransferArgs, canID principal.Principal) (uint64, error) {
+func (u *L1User) TransferIC(txArgs icpledger.TransferArgs, canID principal.Principal) (uint64, error) {
 	ldg := u.Conn.LedgerAgent
 
 	transferResult, err := ldg.Transfer(txArgs)
 	if err != nil {
-		return 0, fmt.Errorf("dfx transfer command in TransferDfx failed: %v", err)
+		return 0, fmt.Errorf("Transfer method in TransferIC failed: %v", err)
 	}
 
 	if transferResult.Err != nil {
@@ -160,7 +160,7 @@ func createTransferArgs(i int, toAccount []byte, txBalance uint64) icpledger.Tra
 		}{E8s: txBalance},
 		Fee: struct {
 			E8s uint64 "ic:\"e8s\""
-		}{E8s: chanconn.DfxTransferFee},
+		}{E8s: chanconn.ICTransferFee},
 		To: toAccount,
 	}
 }
@@ -216,9 +216,9 @@ func TransferSetup(t *testing.T) *L1Setup {
 	}
 
 	accs := []*principal.Principal{&alicePrince, &bobPrince}
-	conn1 := chanconn.NewDfxConnector(perunID, ledgerID, aliceAccPath, Host, Port)
-	conn2 := chanconn.NewDfxConnector(perunID, ledgerID, bobAccPath, Host, Port)
-	connPerun := chanconn.NewDfxConnector(perunID, ledgerID, minterAccPath, Host, Port)
+	conn1 := chanconn.NewICConnector(perunID, ledgerID, aliceAccPath, Host, Port)
+	conn2 := chanconn.NewICConnector(perunID, ledgerID, bobAccPath, Host, Port)
+	connPerun := chanconn.NewICConnector(perunID, ledgerID, minterAccPath, Host, Port)
 
 	conns := []*chanconn.Connector{conn1, conn2}
 	return &L1Setup{t, accs, &minterPrince, &perunPrince, conns, connPerun}

@@ -73,7 +73,7 @@ func MakeTransferArgs(memo Memo, amount uint64, fee uint64, recipient string) ic
 	}
 }
 
-func (c *Connector) TransferDfx(txArgs icpledger.TransferArgs) (*icpledger.TransferResult, error) {
+func (c *Connector) TransferIC(txArgs icpledger.TransferArgs) (*icpledger.TransferResult, error) {
 	transferResult, err := c.LedgerAgent.Transfer(txArgs)
 	if err != nil {
 		return nil, ErrFundTransfer

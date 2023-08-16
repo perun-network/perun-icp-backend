@@ -60,8 +60,8 @@ func TestFunding(t *testing.T) {
 	chanBals, err := s.GetChannelBalances(cid)
 	require.NoError(t, err)
 
-	allocDiffrL1 := chanAlloc + 2*chanconn.DfxTransferFee
-	allocDiffrChan := chanAlloc + chanconn.DfxTransferFee
+	allocDiffrL1 := chanAlloc + 2*chanconn.ICTransferFee
+	allocDiffrChan := chanAlloc + chanconn.ICTransferFee
 
 	for i, el := range chanBals {
 		// check that channel balances are exactly allocation plus withdrawal fees
