@@ -58,30 +58,6 @@ deployLedger() {
     fi
 }
 
-# Define the function to deploy Perun
-deployPerun() {
-    local execPath=$1
-
-    path=$(which dfx)
-    if [ -z "$path" ]; then
-        echo "Error: dfx not found in PATH"
-        return 1
-    fi
-
-    echo "Deploying Perun"
-    # cd $execPath
-    deployMsg=$($path deploy icp_perun 2>&1)
-    status=$?
-
-    if [ $status -ne 0 ]; then
-        echo "Error deploying icp_perun:\n$deployMsg\n"
-        return $status
-    else
-        echo "$deployMsg"
-        return 0
-    fi
-}
-
 # Call the functions
 ledgerArg=$(createLedgerArg)
 ./startdfx.sh
