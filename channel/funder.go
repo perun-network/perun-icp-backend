@@ -216,6 +216,7 @@ func NewDepositReqFromPerun(req *pchannel.FundingReq, acc pwallet.Account) (*Dep
 	if !req.Agreement.Equal(req.State.Balances) && (len(req.Agreement) == 1) {
 		return nil, ErrFundingReqIncompatible
 	}
+	// The funding request is for a single asset channel, so the only entry is 0th index with two balances.
 	bal := req.Agreement[0][req.Idx]
 	fee := big.NewInt(chanconn.ICTransferFee)
 	fReq, err := MakeFundingReq(req)

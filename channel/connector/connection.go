@@ -28,14 +28,13 @@ import (
 	"os"
 	"perun.network/go-perun/log"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
-	"sync"
+	//"sync"
 )
 
 // Connects Perun users with the Internet Computer
 type Connector struct {
 	Log         log.Embedding
 	ICAgent     *agent.Agent
-	Mutex       *sync.Mutex
 	PerunID     *principal.Principal
 	LedgerID    *principal.Principal
 	L1Account   *principal.Principal

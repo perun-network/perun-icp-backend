@@ -21,8 +21,15 @@ import (
 	"math/big"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
 	"perun.network/perun-icp-backend/wallet"
+	"sync"
 	"time"
 )
+
+// This Mutex prevents RW conflicts on the Perun canister by locking the NotifyTransferToPerun and DepositToPerunChannel methods as long
+//  as one user is waiting for a response on the funding operation.
+// This prevents canister state conflicts during the funding process.
+
+var connMutex sync.Mutex
 
 func BuildDeposit(addr wallet.Address, cid ChannelID) icperun.Funding {
 
@@ -42,8 +49,8 @@ func BuildDeposit(addr wallet.Address, cid ChannelID) icperun.Funding {
 func (c *Connector) DepositToPerunChannel(addr wallet.Address, cid ChannelID) error {
 
 	depositArgs := BuildDeposit(addr, cid)
-	c.Mutex.Lock()
-	defer c.Mutex.Unlock()
+	connMutex.Lock()
+	defer connMutex.Unlock()
 
 	_, err := c.PerunAgent.Deposit(depositArgs)
 	if err != nil {
@@ -108,8 +115,8 @@ func HandleTransferError(err *icpledger.TransferError) error {
 }
 
 func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun principal.Principal) (uint64, error) {
-	c.Mutex.Lock()
-	defer c.Mutex.Unlock()
+	connMutex.Lock()
+	defer connMutex.Unlock()
 	receiptAmount, err := c.PerunAgent.TransactionNotification(blockNum)
 	if err != nil {
 		return 0, fmt.Errorf("error notifying transfer to Perun: %v", err)
@@ -118,7 +125,6 @@ func (c *Connector) NotifyTransferToPerun(blockNum BlockNum, recipientPerun prin
 
 	bn := bnn.BigInt()
 	bnint := bn.Uint64()
-
 	if err != nil {
 		return 0, fmt.Errorf("error extracting transaction amount: %v", err)
 	}

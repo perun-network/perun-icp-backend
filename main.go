@@ -17,6 +17,8 @@ package main
 import (
 	"log"
 	"os"
+
+	"perun.network/go-perun/wire"
 	vc "perun.network/perun-demo-tui/client"
 	"perun.network/perun-demo-tui/view"
 	"perun.network/perun-icp-backend/client"
@@ -45,14 +47,14 @@ func main() {
 	perunWltA := wallet.NewWallet()
 	perunWltB := wallet.NewWallet()
 
-	sharedComm := client.InitSharedComm()
+	bus := wire.NewLocalBus()
 
-	alice, err := client.SetupPaymentClient("alice", perunWltA, sharedComm, perunID, ledgerID, Host, Port, userAPemPath)
+	alice, err := client.SetupPaymentClient("alice", perunWltA, bus, perunID, ledgerID, Host, Port, userAPemPath)
 	if err != nil {
 		panic(err)
 	}
 
-	bob, err := client.SetupPaymentClient("bob", perunWltB, sharedComm, perunID, ledgerID, Host, Port, userBPemPath)
+	bob, err := client.SetupPaymentClient("bob", perunWltB, bus, perunID, ledgerID, Host, Port, userBPemPath)
 	if err != nil {
 		panic(err)
 	}

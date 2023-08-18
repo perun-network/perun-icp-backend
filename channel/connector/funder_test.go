@@ -15,17 +15,14 @@
 package connector_test
 
 import (
-	"math/big"
-
 	"github.com/stretchr/testify/require"
-
+	"math/big"
 	"math/rand"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/test"
 	chtest "perun.network/perun-icp-backend/channel/test"
-	"time"
-
 	"testing"
+	"time"
 )
 
 func TestFunding(t *testing.T) {
@@ -54,10 +51,12 @@ func TestFunding(t *testing.T) {
 	balsPost, err := s.GetL1Balances()
 	require.NoError(t, err)
 	perunBalsPost, err := s.GetPerunBalances()
+
 	require.NoError(t, err)
 
 	cid := params.ID()
 	chanBals, err := s.GetChannelBalances(cid)
+
 	require.NoError(t, err)
 
 	allocDiffrL1 := chanAlloc + 2*chanconn.ICTransferFee

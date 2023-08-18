@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	pchannel "perun.network/go-perun/channel"
+	//pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 )
 
@@ -93,11 +93,12 @@ func (t *Timeout) Wait(ctx context.Context) error {
 }
 
 // MakeTimeout creates a new timeout.
-func MakeTimeout(sec ChallengeDuration) pchannel.Timeout {
-	return NewTimeout(MakeTime(sec), DefaultTimeoutPollInterval)
+func MakeTimeout(sec ChallengeDuration) *Timeout {
+	expirationTime := time.Now().Add(MakeTime(sec))
+	return NewTimeout(expirationTime, DefaultTimeoutPollInterval)
 }
 
 // MakeTime creates a new time from the argument.
-func MakeTime(sec ChallengeDuration) time.Time {
-	return time.Unix(int64(sec), 0)
+func MakeTime(sec ChallengeDuration) time.Duration {
+	return time.Duration(sec) * time.Second
 }

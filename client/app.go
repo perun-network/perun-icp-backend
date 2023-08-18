@@ -20,18 +20,17 @@ import (
 	"math/big"
 	"perun.network/go-perun/client"
 	"perun.network/go-perun/watcher/local"
+	"perun.network/go-perun/wire"
 	"perun.network/go-perun/wire/net/simple"
-
 	"perun.network/perun-icp-backend/channel"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
-
 	"perun.network/perun-icp-backend/wallet"
 )
 
 func SetupPaymentClient(
 	name string,
 	w *wallet.FsWallet, // w is the wallet used to resolve addresses to accounts for channels.
-	sharedComm *SharedComm,
+	bus *wire.LocalBus,
 	perunID string,
 	ledgerID string,
 	host string,
@@ -44,9 +43,6 @@ func SetupPaymentClient(
 	// Connect to Perun pallet and get funder + adjudicator from it.
 
 	perunConn := chanconn.NewICConnector(perunID, ledgerID, accountPath, host, port)
-
-	perunConn.Mutex = sharedComm.mutex
-	bus := sharedComm.bus
 
 	funder := channel.NewFunder(acc, perunConn)
 	adj := channel.NewAdjudicator(acc, perunConn)

@@ -25,7 +25,6 @@ import (
 	"perun.network/perun-icp-backend/channel"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	chtest "perun.network/perun-icp-backend/channel/test"
-	"sync"
 	"testing"
 )
 
@@ -43,10 +42,7 @@ func NewPerunSetup(t *testing.T) *PerunSetup {
 
 	ret := &PerunSetup{Setup: s}
 
-	sharedMutex := &sync.Mutex{}
-
 	for i := 0; i < len(s.L2Accs); i++ {
-		c[i].Mutex = sharedMutex
 		dep := channel.NewDepositor(c[i])
 		ret.Deps = append(ret.Deps, dep)
 		ret.Funders = append(ret.Funders, channel.NewFunder(s.L2Accs[i], c[i]))

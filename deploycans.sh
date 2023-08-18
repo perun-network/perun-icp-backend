@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Get the directory of the current script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Define the function to create the ledger argument
 createLedgerArg() {
     local ICP_PERUN_MINT_ACC="433bd8e9dd65bdfb34259667578e749136f3e0ea1566e10af1e0dd324cbd9144"
@@ -61,10 +64,8 @@ deployLedger() {
 # Call the functions
 ledgerArg=$(createLedgerArg)
 ./startdfx.sh
-execPath="./userdata"  # Change this to the directory where dfx command needs to be executed
+execPath="$DIR/userdata"  # Set the directory relative to the script's location
 
 deployLedger $execPath "$ledgerArg"
 deployPerun $execPath
-
-
 

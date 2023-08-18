@@ -17,25 +17,17 @@ package client
 import (
 	"context"
 	"fmt"
-	chanconn "perun.network/perun-icp-backend/channel/connector"
-	"perun.network/perun-icp-backend/channel/connector/icperun"
-
-	vc "perun.network/perun-demo-tui/client"
-	"sync"
-
+	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 	"perun.network/go-perun/wire"
-
-	"math/big"
+	vc "perun.network/perun-demo-tui/client"
 	"perun.network/perun-icp-backend/channel"
+	chanconn "perun.network/perun-icp-backend/channel/connector"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
 	icwallet "perun.network/perun-icp-backend/wallet"
+	"sync"
 )
-
-type SharedComm struct {
-	bus   wire.Bus
-	mutex *sync.Mutex
-}
 
 // PaymentClient is a payment channel client.
 type PaymentClient struct {
@@ -51,15 +43,6 @@ type PaymentClient struct {
 	Name          string
 	wAddr         wire.Address
 	balance       *big.Int
-}
-
-func InitSharedComm() *SharedComm {
-	bus := wire.NewLocalBus()
-	mutex := &sync.Mutex{}
-	return &SharedComm{
-		bus:   bus,
-		mutex: mutex,
-	}
 }
 
 // startWatching starts the dispute watcher for the specified channel.
