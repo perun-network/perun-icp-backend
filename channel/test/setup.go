@@ -22,7 +22,6 @@ import (
 	"math"
 	"math/rand"
 
-	"fmt"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	"perun.network/perun-icp-backend/channel"
@@ -187,7 +186,6 @@ func (s *Setup) GetL1Balances() ([]uint64, error) {
 		}
 
 		bals[i] = bal.E8s
-		fmt.Println("bals getl1balances: ", bals)
 	}
 
 	return bals, nil
