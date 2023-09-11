@@ -1,16 +1,30 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2023 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package wallet
 
 import (
 	"bytes"
+	cr "crypto/rand"
 	"encoding/binary"
 	"errors"
+	"fmt"
+	ed "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
 	"io"
+	"math/rand"
 	"os"
 	"sync"
-
-	ed "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
 
 	"perun.network/go-perun/wallet"
 )
@@ -37,14 +51,26 @@ type openAcc struct {
 var bo = binary.LittleEndian
 
 // NewRAMWallet creates an unpersisted FsWallet.
-func NewRAMWallet(gen io.Reader) *FsWallet {
+func NewRAMWallet(gen io.Reader) (*FsWallet, error) {
 	w := FsWallet{
 		openAccs: make(map[string]*openAcc),
 	}
 
-	io.ReadFull(gen, w.seed[:])
+	_, err := io.ReadFull(gen, w.seed[:])
+	if err != nil {
+		//return nil, fmt.Errorf("error reading random seed: %v", err)
+		panic(err)
+	}
 
-	return &w
+	return &w, nil
+}
+
+func NewWallet() *FsWallet {
+	wlt, err := NewRAMWallet(cr.Reader)
+	if err != nil {
+		panic(err)
+	}
+	return wlt
 }
 
 // CreateOrLoadFsWallet loads the wallet from the requested path, otherwise, it
@@ -109,12 +135,29 @@ func (w *FsWallet) save() error {
 
 	file := new(bytes.Buffer)
 	file.Write(w.seed[:])
-	binary.Write(file, bo, w.latestAcc)
-	binary.Write(file, bo, uint32(len(w.openAccs)))
+
+	err := binary.Write(file, bo, w.latestAcc)
+	if err != nil {
+		panic(err)
+	}
+
+	err = binary.Write(file, bo, uint32(len(w.openAccs)))
+	if err != nil {
+		panic(err)
+	}
+
 	for pk, acc := range w.openAccs {
 		file.Write([]byte(pk))
-		binary.Write(file, bo, acc.nonce)
-		binary.Write(file, bo, acc.useCount)
+
+		err = binary.Write(file, bo, acc.nonce)
+		if err != nil {
+			panic(err)
+		}
+
+		err = binary.Write(file, bo, acc.useCount)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return os.WriteFile(w.file, file.Bytes(), 0644)
@@ -123,7 +166,11 @@ func (w *FsWallet) save() error {
 func (w *FsWallet) genAcc(id uint64) Account {
 	seed := new(bytes.Buffer)
 	seed.Write(w.seed[:])
-	binary.Write(seed, bo, id)
+
+	err := binary.Write(seed, bo, id)
+	if err != nil {
+		panic(fmt.Sprintf("error writing id to seed buffer: %v", err))
+	}
 
 	_, sk, err := ed.GenerateKey(seed)
 	if err != nil {
@@ -150,6 +197,22 @@ func (w *FsWallet) NewAccount() Account {
 	return acc
 }
 
+// NewRandomAccount creates a new random account using the wallet package.
+func (w *FsWallet) NewRandomAccount(_ *rand.Rand) wallet.Account {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	acc := w.genAcc(w.latestAcc)
+	w.openAccs[string(*acc.Address().(*Address))] = &openAcc{
+		nonce:    w.latestAcc,
+		useCount: 0,
+		acc:      acc,
+	}
+
+	w.latestAcc++
+	return acc
+}
+
 // Unlock retrieves the account belonging to the requested address.
 func (w *FsWallet) Unlock(a wallet.Address) (wallet.Account, error) {
 	w.mutex.Lock()
@@ -158,7 +221,7 @@ func (w *FsWallet) Unlock(a wallet.Address) (wallet.Account, error) {
 	addr := *a.(*Address)
 	acc, ok := w.openAccs[string(addr[:])]
 	if !ok {
-		return nil, errors.New("No such account")
+		return nil, errors.New("no such account")
 	}
 
 	if acc.acc == nil {
@@ -186,10 +249,13 @@ func (w *FsWallet) IncrementUsage(a wallet.Address) {
 	defer w.mutex.Unlock()
 	acc, ok := w.openAccs[string(*a.(*Address))]
 	if !ok {
-		panic("IncrementUsage: account not found!")
+		panic("IncrementUsage: account not found")
 	}
 	acc.useCount++
-	w.save()
+
+	if err := w.save(); err != nil {
+		panic("Error in IncrementUsage during save")
+	}
 }
 
 // DecrementUsage completements IncrementUsage().
@@ -209,5 +275,8 @@ func (w *FsWallet) DecrementUsage(a wallet.Address) {
 		acc.acc.clear()
 		delete(w.openAccs, key)
 	}
-	w.save()
+
+	if err := w.save(); err != nil {
+		panic("Error in DecrementUsage during save")
+	}
 }

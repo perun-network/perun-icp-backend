@@ -12,8 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package wallet contains the off-chain identity and signature handling of
-// go-perun's internet computer backend. It uses ed25519 keys as identities and
-// the EdDSA signature algorithm. Anonymously import the package from your
-// application to inject the backend into go-perun.
-package wallet
+package wire
+
+import (
+	"math/rand"
+
+	"perun.network/go-perun/wire"
+)
+
+// Account is a wire account.
+type Account struct {
+	addr *Address
+}
+
+// Address returns the account's address.
+func (acc *Account) Address() wire.Address {
+	return acc.addr
+}
+
+// NewRandomAccount generates a new random account.
+func NewRandomAccount(rng *rand.Rand) *Account {
+	return &Account{
+		addr: NewRandomAddress(rng),
+	}
+}

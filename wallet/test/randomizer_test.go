@@ -12,8 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package wallet contains the off-chain identity and signature handling of
-// go-perun's internet computer backend. It uses ed25519 keys as identities and
-// the EdDSA signature algorithm. Anonymously import the package from your
-// application to inject the backend into go-perun.
-package wallet
+package test_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	test "perun.network/perun-icp-backend/wallet/test"
+	pkgtest "polycry.pt/poly-go/test"
+)
+
+func TestRandomizer_RandomAddress(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	r := test.NewRandomizer()
+	addr := r.NewRandomAddress(rng)
+
+	for i := 0; i < 1000; i++ {
+		addr2 := r.NewRandomAddress(rng)
+		require.False(t, addr.Equal(addr2))
+	}
+}
