@@ -12,6 +12,13 @@ createLedgerArg() {
     echo "(record {minting_account = \"$ICP_PERUN_MINT_ACC\"; initial_values = vec { record { \"$ICP_PERUN_USERA_ACC\"; record { e8s=10_000_000} }; record { \"$ICP_PERUN_USERB_ACC\"; record { e8s=10_000_000 } }}; send_whitelist = vec {}})"
 }
 
+ICP_PERUN_PRINCIPAL="be2us-64aaa-aaaaa-qaabq-cai"
+ICP_LEDGER_PRINCIPAL="bkyz2-fmaaa-aaaaa-qaaaq-cai"
+
+# Exporting them so that they can be accessed by other commands or scripts invoked after this script
+export ICP_PERUN_PRINCIPAL
+export ICP_LEDGER_PRINCIPAL
+
 # Define the function to deploy Perun
 deployPerun() {
     local execPath=$1
@@ -64,7 +71,7 @@ deployLedger() {
 # Call the functions
 ledgerArg=$(createLedgerArg)
 ./startdfx.sh
-execPath="$DIR/userdata"  # Set the directory relative to the script's location
+execPath="$DIR/userdata"
 
 deployLedger $execPath "$ledgerArg"
 deployPerun $execPath

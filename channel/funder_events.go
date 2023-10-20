@@ -16,7 +16,6 @@ package channel
 
 import (
 	"fmt"
-	pchannel "perun.network/go-perun/channel"
 	"perun.network/perun-icp-backend/wallet"
 	"regexp"
 	"strconv"
@@ -34,14 +33,6 @@ type FundedEvent struct {
 	Address   wallet.Address
 	Total     uint64
 	Timestamp uint64
-}
-
-type FundEvent struct {
-	Amount         pchannel.Bal
-	Receiver       wallet.Address
-	ChannelID      [64]byte
-	Timestamp      uint64
-	ParticipantIdx pchannel.Index
 }
 
 func parseEvents(input string) ([]FundedEvent, error) {

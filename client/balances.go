@@ -24,7 +24,7 @@ import (
 func FormatBalance(bal *big.Int) string {
 	log.Printf("balance: %s", bal.String())
 	balIC := bigIntToFloat64(bal)
-	return strconv.FormatFloat(balIC, 'f', 6, 64) + " ICP"
+	return strconv.FormatFloat(balIC, 'f', 6, 64) + " Token"
 }
 
 func bigIntToFloat64(bi *big.Int) float64 {

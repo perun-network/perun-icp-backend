@@ -1,13 +1,12 @@
 #!/bin/sh
 
-# Define the function
 startDFX() {
     path=$(which dfx)
     if [ -z "$path" ]; then
         echo "Error: dfx not found in PATH"
         return 1
     fi
-    execPath="./userdata"  # Change this to your preferred directory
+    execPath="./userdata"
     cd $execPath
     $path start --background --clean --host 127.0.0.1:4943 &
     status=$?

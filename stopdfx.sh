@@ -14,4 +14,3 @@ if [ $dfx_status -ne 0 ] || [ $icx_status -ne 0 ]; then
 else
     echo "DFX and ICX processes stopped."
 fi
-

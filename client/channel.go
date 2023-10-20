@@ -118,7 +118,7 @@ func FormatState(c *PaymentChannel, state *channel.State) string {
 		log.Fatalf("invalid parties length: " + strconv.Itoa(len(parties)))
 	}
 	ret := fmt.Sprintf(
-		"Channel ID: [green]%s[white]\nBalances:\n    %s: [green]%s[white] ICP\n    %s: [green]%s[white] ICP\nFinal: [green]%t[white]\nVersion: [green]%d[white]",
+		"Channel ID: [green]%s[white]\nBalances:\n    %s: [green]%s[white] Token\n    %s: [green]%s[white] Token\nFinal: [green]%t[white]\nVersion: [green]%d[white]",
 		hex.EncodeToString(id[:]),
 		fstPartyPaymentAddr,
 		balAStr,
