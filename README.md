@@ -96,17 +96,6 @@ After successful initialization of the local blockchain, you can now run the dem
 ./stopdfx.sh
 ```
 
-## [Payment Channel Demo](#payment~channel~demo)
-
-To run the Perun Payment Chanel Demo, [install](##installation) and [initialize](#run-the-dfx-blockchain) the local blockchain. Then, run the ```main.go``` file in the main directory:
-
-```sh
-cd perun-icp-backend
-go run main.go
-```
-
-A basic overview of the functionality can be found in our [Perun Demo TUI](https://github.com/perun-network/perun-demo-tui) repository. 
-
 ## [Tests](#tests)
 
 To test the main components of the Perun Internet Computer backend, perform the [installation](##installation), and [initialize](#run-the-dfx-blockchain) the local blockchain. Afterwards, run the tests with the following command:
@@ -115,6 +104,10 @@ To test the main components of the Perun Internet Computer backend, perform the 
 cd perun-icp-backend
 go test -v ./...
 ```
+
+## [Payment Channel Demo](#payment~channel~demo)
+
+A Payment Channel demo for a local Internet Computer blockchain is located [here](https://github.com/perun-network/perun-icp-demo). It uses this repository and the deploys the canister from the [Perun IC canister repository](https://github.com/perun-network/perun-icp-canister).
 
 ## Copyright
 
