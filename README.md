@@ -67,7 +67,7 @@ Verify that the identities have been imported, using ```dfx identity list``` and
 
 ## [Run the Internet Computer blockchain](#run~the~internet~computer~blockchain)
 
-After installation, to use the backend, you first need to instantiate a local Internet Computer and deploy the ledger Perun canister. The script ```deploycans.sh``` does this for you:
+After installation, to use the backend, you first need to instantiate a local Internet Computer and deploy the ledger Perun canister. The script ```deploycans.sh``` does **this** for you:
 
 ```sh
 cd perun-icp-backend

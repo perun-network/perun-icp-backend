@@ -20,12 +20,13 @@ import (
 	"fmt"
 
 	"github.com/aviate-labs/agent-go"
-	"github.com/aviate-labs/agent-go/ic/icpledger"
+	"github.com/aviate-labs/ic-go/icpledger"
+
+	"net/url"
+	"os"
 
 	"github.com/aviate-labs/agent-go/identity"
 	"github.com/aviate-labs/agent-go/principal"
-	"net/url"
-	"os"
 	"perun.network/go-perun/log"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
 	//"sync"
@@ -108,11 +109,10 @@ func NewICAgent(accountPath string, host string, port int) (*agent.Agent, error)
 	}
 
 	agent, err := agent.New(agent.Config{
-		Identity: *agentID,
-		ClientConfig: &agent.ClientConfig{
-			Host: ic0,
-		},
-		FetchRootKey: true})
+		Identity:     *agentID,
+		ClientConfig: []agent.ClientOption{agent.WithHostURL(ic0)},
+		FetchRootKey: true,
+	})
 
 	if err != nil {
 		return nil, err
@@ -132,10 +132,8 @@ func NewPerunAgent(canID principal.Principal, accountPath, host string, port int
 	}
 
 	agent, err := icperun.NewAgent(canID, agent.Config{
-		Identity: *agentID,
-		ClientConfig: &agent.ClientConfig{
-			Host: ic0,
-		},
+		Identity:     *agentID,
+		ClientConfig: []agent.ClientOption{agent.WithHostURL(ic0)},
 		FetchRootKey: true,
 	})
 	if err != nil {
@@ -156,10 +154,8 @@ func NewLedgerAgent(canID principal.Principal, accountPath, host string, port in
 	}
 
 	agent, err := icpledger.NewAgent(canID, agent.Config{
-		Identity: *agentID,
-		ClientConfig: &agent.ClientConfig{
-			Host: ic0,
-		},
+		Identity:     *agentID,
+		ClientConfig: []agent.ClientOption{agent.WithHostURL(ic0)},
 		FetchRootKey: true,
 	})
 	if err != nil {

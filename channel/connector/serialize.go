@@ -17,6 +17,7 @@ package connector
 import (
 	"errors"
 	"math/big"
+
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/wallet"
@@ -78,12 +79,12 @@ func MakeNonce(nonce *big.Int) (Nonce, error) {
 }
 
 // MakeOffIdents creates a new []OffIdentity.
-func MakeOffIdents(parts []pwallet.Address) ([]OffIdentity, error) {
+func MakeOffIdents(parts []map[pwallet.BackendID]pwallet.Address) ([]OffIdentity, error) {
 	var err error
 	ret := make([]OffIdentity, len(parts))
 
 	for i, part := range parts {
-		if ret[i], err = MakeOffIdent(part); err != nil {
+		if ret[i], err = MakeOffIdent(part[wallet.ICPBackendID]); err != nil {
 			break
 		}
 	}
@@ -154,10 +155,12 @@ func NewParams(p *pchannel.Params) (*Params, error) {
 
 	var appID OffIdentity
 	if !pchannel.IsNoApp(p.App) {
-		appID, err = MakeOffIdent(p.App.Def())
-		if err != nil {
-			return nil, err
+		var ok bool
+		appDefPtr, ok := p.App.Def().(*AppID)
+		if !ok {
+			panic("appDef is not of type *AppID")
 		}
+		appID = *appDefPtr
 	}
 
 	return &Params{

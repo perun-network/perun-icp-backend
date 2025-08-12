@@ -16,13 +16,14 @@ package connector
 
 import (
 	"fmt"
-	"github.com/aviate-labs/agent-go/ic/icpledger"
-	"github.com/aviate-labs/agent-go/principal"
 	"math/big"
-	"perun.network/perun-icp-backend/channel/connector/icperun"
-	"perun.network/perun-icp-backend/wallet"
 	"sync"
 	"time"
+
+	"github.com/aviate-labs/agent-go/principal"
+	"github.com/aviate-labs/ic-go/icpledger"
+	"perun.network/perun-icp-backend/channel/connector/icperun"
+	"perun.network/perun-icp-backend/wallet"
 )
 
 // This Mutex prevents RW conflicts on the Perun canister by locking the NotifyTransferToPerun and DepositToPerunChannel methods as long
@@ -73,7 +74,7 @@ func MakeTransferArgs(memo Memo, amount uint64, fee uint64, recipient string) ic
 			E8s: fee,
 		},
 		FromSubaccount: &subAccount,
-		To:             p.AccountIdentifier(principal.DefaultSubAccount).Bytes(),
+		To:             principal.NewAccountID(p, principal.DefaultSubAccount).Bytes(),
 		CreatedAtTime: &icpledger.TimeStamp{
 			TimestampNanos: uint64(time.Now().UnixNano()),
 		},
@@ -153,13 +154,13 @@ func (c *Connector) BuildTransfer(transactor principal.Principal, _amount, _fee 
 
 	return icpledger.TransferArgs{
 		Memo: memo,
-		Amount: struct {
-			E8s uint64 "ic:\"e8s\""
-		}{E8s: amount + fee},
-		Fee: struct {
-			E8s uint64 "ic:\"e8s\""
-		}{E8s: fee},
+		Amount: icpledger.Tokens{
+			E8s: amount + fee,
+		},
+		Fee: icpledger.Tokens{
+			E8s: fee,
+		},
 		//FromSubaccount: &accIDBytes,
-		To: receiver.AccountIdentifier(principal.DefaultSubAccount).Bytes(),
+		To: principal.NewAccountID(receiver, principal.DefaultSubAccount).Bytes(),
 	}, nil
 }

@@ -32,9 +32,9 @@ func (a Account) Address() wallet.Address {
 	return &addr
 }
 
-func (a Account) L2Address() Address {
+func (a Account) L2Address() *Address {
 	addr := Address(ed.PrivateKey(a).Public().(ed.PublicKey))
-	return addr
+	return &addr
 }
 
 func (a Account) SignData(data []byte) ([]byte, error) {

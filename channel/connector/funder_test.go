@@ -15,14 +15,17 @@
 package connector_test
 
 import (
-	"github.com/stretchr/testify/require"
 	"math/big"
 	"math/rand"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	pwallet "perun.network/go-perun/wallet"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/test"
 	chtest "perun.network/perun-icp-backend/channel/test"
-	"testing"
-	"time"
+	"perun.network/perun-icp-backend/wallet"
 )
 
 func TestFunding(t *testing.T) {
@@ -36,7 +39,7 @@ func TestFunding(t *testing.T) {
 	for i := 0; i < len(state.Allocation.Balances[0]); i++ {
 		state.Allocation.Balances[0][i] = new(big.Int).SetUint64(chanAlloc)
 		l2Address := s.Funders[i].GetAcc().L2Address()
-		params.Parts[i] = &l2Address
+		params.Parts[i] = map[pwallet.BackendID]pwallet.Address{wallet.ICPBackendID: l2Address}
 	}
 
 	dSetup := chtest.NewDepositSetup(params, state)

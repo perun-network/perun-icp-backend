@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"math/rand"
+
 	ed "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
 	"perun.network/go-perun/wallet"
 	_ "perun.network/go-perun/wire"
@@ -65,4 +67,17 @@ func (a *Address) Cmp(b wallet.Address) int {
 
 func AsAddr(acc wallet.Address) *Address {
 	return acc.(*Address)
+}
+
+func (a *Address) BackendID() wallet.BackendID {
+	return ICPBackendID
+}
+
+func NewRandomAddress(rng *rand.Rand) *Address {
+	var pk ed.PublicKey
+	if _, err := rng.Read(pk[:]); err != nil {
+		panic(fmt.Sprintf("error generating random address: %v", err))
+	}
+	addr := Address(pk)
+	return &addr
 }

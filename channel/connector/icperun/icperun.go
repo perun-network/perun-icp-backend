@@ -15,10 +15,11 @@
 package icperun
 
 import (
+	"math/big"
+
 	"github.com/aviate-labs/agent-go"
 	"github.com/aviate-labs/agent-go/candid/idl"
 	"github.com/aviate-labs/agent-go/principal"
-	"math/big"
 )
 
 type Agent struct {
@@ -116,15 +117,11 @@ func NewAgent(canisterId principal.Principal, config agent.Config) (*Agent, erro
 }
 
 func (a Agent) Conclude(arg0 AdjRequest) (Error, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return "", err
-	}
 	var r0 Error
 	if err := a.a.Call(
 		a.canisterId,
 		"conclude",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return "", err
@@ -133,15 +130,11 @@ func (a Agent) Conclude(arg0 AdjRequest) (Error, error) {
 }
 
 func (a Agent) Dispute(arg0 AdjRequest) (Error, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return "", err
-	}
 	var r0 Error
 	if err := a.a.Call(
 		a.canisterId,
 		"dispute",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return "", err
@@ -150,15 +143,11 @@ func (a Agent) Dispute(arg0 AdjRequest) (Error, error) {
 }
 
 func (a Agent) QueryHoldings(arg0 Funding) (**Amount, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return nil, err
-	}
 	var r0 *Amount
 	if err := a.a.Query(
 		a.canisterId,
 		"query_holdings",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return nil, err
@@ -167,16 +156,11 @@ func (a Agent) QueryHoldings(arg0 Funding) (**Amount, error) {
 }
 
 func (a Agent) QueryEvents(arg0 ChannelTime) (EventTxt, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return "", err
-	}
-
 	var r0 EventTxt
 	if err := a.a.Query(
 		a.canisterId,
 		"query_events",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return "", err
@@ -186,15 +170,11 @@ func (a Agent) QueryEvents(arg0 ChannelTime) (EventTxt, error) {
 }
 
 func (a Agent) QueryState(arg0 ChannelId) (*RegisteredState, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return nil, err
-	}
 	var r0 *RegisteredState
 	if err := a.a.Call(
 		a.canisterId,
 		"query_state",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return nil, err
@@ -203,15 +183,11 @@ func (a Agent) QueryState(arg0 ChannelId) (*RegisteredState, error) {
 }
 
 func (a Agent) TransactionNotification(arg0 uint64) (**Amount, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return nil, err
-	}
 	var r0 *Amount
 	if err := a.a.Call(
 		a.canisterId,
 		"transaction_notification",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return nil, err
@@ -220,15 +196,11 @@ func (a Agent) TransactionNotification(arg0 uint64) (**Amount, error) {
 }
 
 func (a Agent) Withdraw(arg0 WithdrawalRequest) (Error, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return "", err
-	}
 	var r0 Error
 	if err := a.a.Call(
 		a.canisterId,
 		"withdraw",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return "", err
@@ -237,15 +209,11 @@ func (a Agent) Withdraw(arg0 WithdrawalRequest) (Error, error) {
 }
 
 func (a Agent) Deposit(arg0 Funding) (*Error, error) {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return nil, err
-	}
 	var r0 Error
 	if err := a.a.Call(
 		a.canisterId,
 		"deposit",
-		args,
+		[]any{arg0},
 		[]any{&r0},
 	); err != nil {
 		return nil, err
@@ -254,14 +222,10 @@ func (a Agent) Deposit(arg0 Funding) (*Error, error) {
 }
 
 func (a Agent) RegisterEvent(arg0 FundMem) error {
-	args, err := idl.Marshal([]any{arg0})
-	if err != nil {
-		return err
-	}
 	if err := a.a.Call(
 		a.canisterId,
 		"deposit_memo",
-		args,
+		[]any{arg0},
 		[]any{},
 	); err != nil {
 		return err

@@ -17,13 +17,15 @@ package test
 import (
 	"context"
 	cr "crypto/rand"
-	"github.com/aviate-labs/agent-go/ic/icpledger"
-	"github.com/aviate-labs/agent-go/principal"
 	"math"
 	"math/rand"
 
+	"github.com/aviate-labs/agent-go/principal"
+	"github.com/aviate-labs/ic-go/icpledger"
+
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
+	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/channel"
 	pkgtest "polycry.pt/poly-go/test"
 
@@ -31,9 +33,10 @@ import (
 	"perun.network/perun-icp-backend/channel/connector/icperun"
 
 	"path/filepath"
-	"perun.network/perun-icp-backend/wallet"
 	"testing"
 	"time"
+
+	"perun.network/perun-icp-backend/wallet"
 )
 
 const (
@@ -79,7 +82,11 @@ func NewTestSetup(t *testing.T) *Setup {
 	if err != nil {
 		t.Fatal("Error generating random account:", err)
 	}
-	accsL2 := []wallet.Account{aliceL2Acc, bobL2Acc}
+	accsL2 := []map[pwallet.BackendID]pwallet.Account{{
+		wallet.ICPBackendID: aliceL2Acc,
+	}, {
+		wallet.ICPBackendID: bobL2Acc,
+	}}
 	alicePrince := (*aliceL1Acc).Sender()
 	bobPrince := (*bobL1Acc).Sender()
 
@@ -95,7 +102,7 @@ type Setup struct {
 	T       *testing.T
 	Rng     *rand.Rand
 	L1Accs  []*principal.Principal
-	L2Accs  []wallet.Account
+	L2Accs  []map[pwallet.BackendID]pwallet.Account
 	ICConns []*chanconn.Connector
 }
 
@@ -178,7 +185,7 @@ func (s *Setup) GetL1Balances() ([]uint64, error) {
 	for i, acc := range s.L1Accs {
 		l1Ledger := s.ICConns[i].LedgerAgent
 
-		accID := acc.AccountIdentifier(principal.DefaultSubAccount)
+		accID := principal.NewAccountID(*acc, principal.DefaultSubAccount)
 
 		bal, err := l1Ledger.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
 		if err != nil {
@@ -198,7 +205,7 @@ func (s *Setup) GetPerunBalances() ([]uint64, error) {
 	for i := range s.L1Accs {
 		l1Ledger := s.ICConns[i].LedgerAgent
 
-		accID := s.ICConns[i].PerunID.AccountIdentifier((principal.DefaultSubAccount)) //acc.AccountIdentifier(principal.DefaultSubAccount)
+		accID := principal.NewAccountID(*s.ICConns[i].PerunID, principal.DefaultSubAccount)
 
 		bal, err := l1Ledger.AccountBalance(icpledger.AccountBalanceArgs{Account: accID.Bytes()})
 		if err != nil {
@@ -217,7 +224,7 @@ func (s *Setup) GetChannelBalances(cid pchannel.ID) ([]uint64, error) {
 
 	for i, acc := range s.L2Accs {
 		ICConn := s.ICConns[i]
-		l2Addr, err := acc.Address().MarshalBinary()
+		l2Addr, err := acc[wallet.ICPBackendID].Address().MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
