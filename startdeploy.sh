@@ -72,7 +72,7 @@ deployLedger() {
 ledgerArg=$(createLedgerArg)
 ./startdfx.sh
 execPath="$DIR/userdata"
-
+sleep 5
 deployLedger $execPath "$ledgerArg"
 deployPerun $execPath
 
