@@ -15,14 +15,16 @@
 package connector_test
 
 import (
-	"github.com/stretchr/testify/require"
 	"log"
 	"math/big"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
 	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/channel"
-	"testing"
+	"perun.network/perun-icp-backend/wallet"
 
 	"perun.network/perun-icp-backend/channel/connector/test"
 
@@ -42,7 +44,9 @@ func TestAdjudicator_Register(t *testing.T) {
 	require.NoError(t, err)
 
 	// initialize adjudicator as user with index 0
-	adj := channel.NewAdjudicator(s.L2Accs[userIdx], s.ICConns[userIdx])
+	l2adj, ok := s.L2Accs[userIdx][wallet.ICPBackendID].(wallet.Account)
+	require.True(t, ok, "L2 account is not of type wallet.Account")
+	adj := channel.NewAdjudicator(l2adj, s.ICConns[userIdx])
 
 	ctx := s.NewCtx()
 
@@ -73,13 +77,17 @@ func TestAdjudicator_ConcludeFinal(t *testing.T) {
 	{
 		// Alice
 		adjIdx := 0
-		adj := channel.NewAdjudicator(s.L2Accs[adjIdx], s.ICConns[adjIdx])
+		l2adj, ok := s.L2Accs[adjIdx][wallet.ICPBackendID].(wallet.Account)
+		require.True(t, ok, "L2 account is not of type wallet.Account")
+		adj := channel.NewAdjudicator(l2adj, s.ICConns[adjIdx])
 		ctx := s.NewCtx()
 		require.NoError(t, adj.Withdraw(ctx, req, nil))
 		withdrawerIdx := 1
 		req.Idx = 1
 		req.Acc = s.L2Accs[withdrawerIdx]
-		adjWithdrawer := channel.NewAdjudicator(s.L2Accs[withdrawerIdx], s.ICConns[withdrawerIdx])
+		l2Withdrawer, ok := s.L2Accs[withdrawerIdx][wallet.ICPBackendID].(wallet.Account)
+		require.True(t, ok, "L2 account is not of type wallet.Account")
+		adjWithdrawer := channel.NewAdjudicator(l2Withdrawer, s.ICConns[withdrawerIdx])
 		require.NoError(t, adjWithdrawer.Withdraw(ctx, req, nil))
 	}
 }
@@ -91,9 +99,13 @@ func TestAdjudicator_Walkthrough(t *testing.T) {
 	req, params, state := newAdjReq(s, chanAlloc, userIdx, 0, false)
 	dSetup := chtest.NewDepositSetup(params, state)
 	adjAliceIdx := 0
-	adjAlice := channel.NewAdjudicator(s.L2Accs[adjAliceIdx], s.ICConns[adjAliceIdx])
+	l2Alice, ok := s.L2Accs[adjAliceIdx][wallet.ICPBackendID].(wallet.Account)
+	require.True(t, ok, "L2 account is not of type wallet.Account")
+	adjAlice := channel.NewAdjudicator(l2Alice, s.ICConns[adjAliceIdx])
 	adjBobIdx := 1
-	adjBob := channel.NewAdjudicator(s.L2Accs[adjBobIdx], s.ICConns[adjBobIdx])
+	l2Bob, ok := s.L2Accs[adjBobIdx][wallet.ICPBackendID].(wallet.Account)
+	require.True(t, ok, "L2 account is not of type wallet.Account")
+	adjBob := channel.NewAdjudicator(l2Bob, s.ICConns[adjBobIdx])
 	ctx := s.NewCtx()
 
 	// Fund
@@ -154,7 +166,11 @@ func newAdjReq(s *test.PerunSetup, alloc uint64, userIdx int, version uint64, fi
 	aliceAddr := s.Funders[0].GetAcc().L2Address()
 	bobAddr := s.Funders[1].GetAcc().L2Address()
 
-	params, err := pchannel.NewParams(60, []pwallet.Address{&aliceAddr, &bobAddr}, pchannel.NoApp(), nonce, true, false)
+	params, err := pchannel.NewParams(60, []map[pwallet.BackendID]pwallet.Address{{
+		wallet.ICPBackendID: aliceAddr,
+	}, {
+		wallet.ICPBackendID: bobAddr,
+	}}, pchannel.NoApp(), nonce, true, false)
 	require.NoError(s.T, err)
 	state.ID = params.ID()
 	sigs := s.SignState(state)

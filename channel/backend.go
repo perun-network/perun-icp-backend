@@ -17,7 +17,9 @@ package channel
 import (
 	"crypto/sha512"
 	"encoding/binary"
+	"fmt"
 	"math/big"
+
 	pchannel "perun.network/go-perun/channel"
 	pwallet "perun.network/go-perun/wallet"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
@@ -32,12 +34,12 @@ type backend struct{}
 var Backend backend
 
 // CalcID calculates the channelID.
-func (b *backend) CalcID(params *pchannel.Params) (id pchannel.ID) {
-	id, err := CalcID(params)
+func (b *backend) CalcID(params *pchannel.Params) (id pchannel.ID, err error) {
+	id, err = CalcID(params)
 	if err != nil {
-		return pchannel.ID{}
+		return pchannel.ID{}, err
 	}
-	return id
+	return id, nil
 }
 
 // Sign signs a state with the passed account.
@@ -84,13 +86,17 @@ func (*backend) Verify(addr pwallet.Address, state *pchannel.State, sig pwallet.
 }
 
 func (*backend) NewAsset() pchannel.Asset {
-	return Asset
+	return newInvalidAsset()
+}
+
+func (*backend) NewAppID() (pchannel.AppID, error) {
+	panic("no app channels")
 }
 
 func CalcID(params *pchannel.Params) (pchannel.ID, error) {
 	paramsICP, err := chanconn.NewParams(params)
 	if err != nil {
-		panic(err)
+		return pchannel.ID{}, fmt.Errorf("failed to create params: %w", err)
 	}
 
 	partsSlices := make([][]byte, len(paramsICP.Participants))
@@ -103,7 +109,7 @@ func CalcID(params *pchannel.Params) (pchannel.ID, error) {
 	}
 
 	if err != nil {
-		panic(err)
+		return pchannel.ID{}, fmt.Errorf("failed to create params: %w", err)
 	}
 
 	var paramsEnc []byte
@@ -129,7 +135,7 @@ func CalcID(params *pchannel.Params) (pchannel.ID, error) {
 	IDLen := chanconn.IDLen
 
 	if len(hashSum) < IDLen {
-		panic(err)
+		return pchannel.ID{}, fmt.Errorf("hash sum is too short: %d < %d", len(hashSum), IDLen)
 	}
 
 	var id pchannel.ID

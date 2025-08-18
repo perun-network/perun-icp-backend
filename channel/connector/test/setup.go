@@ -16,16 +16,18 @@ package test
 
 import (
 	"crypto/rand"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	mrand "math/rand"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 	pchannel "perun.network/go-perun/channel"
-	"perun.network/go-perun/wallet"
+	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/channel"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	chtest "perun.network/perun-icp-backend/channel/test"
-	"testing"
+	"perun.network/perun-icp-backend/wallet"
 )
 
 type PerunSetup struct {
@@ -45,14 +47,18 @@ func NewPerunSetup(t *testing.T) *PerunSetup {
 	for i := 0; i < len(s.L2Accs); i++ {
 		dep := channel.NewDepositor(c[i])
 		ret.Deps = append(ret.Deps, dep)
-		ret.Funders = append(ret.Funders, channel.NewFunder(s.L2Accs[i], c[i]))
-		ret.Adjs = append(ret.Adjs, channel.NewAdjudicator(s.L2Accs[i], c[i]))
+		l2acc, ok := s.L2Accs[i][wallet.ICPBackendID].(wallet.Account)
+		if !ok {
+			panic("L2 account is not of type wallet.Account")
+		}
+		ret.Funders = append(ret.Funders, channel.NewFunder(l2acc, c[i]))
+		ret.Adjs = append(ret.Adjs, channel.NewAdjudicator(l2acc, c[i]))
 	}
 
 	return ret
 }
 
-func (s *PerunSetup) SignState(state *pchannel.State) []wallet.Sig {
+func (s *PerunSetup) SignState(state *pchannel.State) []pwallet.Sig {
 	stateCan, err := chanconn.StateForChain(state)
 	require.NoError(s.T, err)
 	var stateBytes []byte
@@ -66,12 +72,12 @@ func (s *PerunSetup) SignState(state *pchannel.State) []wallet.Sig {
 
 	stateBytes = append(stateBytes, channel.BoolToBytes(stateCan.Final)...)
 
-	sig1, err := s.L2Accs[0].SignData(stateBytes)
+	sig1, err := s.L2Accs[0][wallet.ICPBackendID].SignData(stateBytes)
 	require.NoError(s.T, err)
-	sig2, err := s.L2Accs[1].SignData(stateBytes)
+	sig2, err := s.L2Accs[1][wallet.ICPBackendID].SignData(stateBytes)
 	require.NoError(s.T, err)
 
-	return []wallet.Sig{sig1, sig2}
+	return []pwallet.Sig{sig1, sig2}
 }
 
 func MixBals(rng io.Reader, bals []pchannel.Bal) {

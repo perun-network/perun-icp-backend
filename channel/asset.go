@@ -45,3 +45,13 @@ func (asset) Equal(b channel.Asset) bool {
 	_, ok := b.(*asset)
 	return ok
 }
+
+// Address returns nil since the backend has only one asset.
+func (asset) Address() []byte {
+	return nil
+}
+
+// NewInvalidAsset returns a new asset that is invalid.
+func newInvalidAsset() *asset {
+	return Asset
+}

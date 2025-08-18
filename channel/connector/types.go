@@ -15,7 +15,11 @@
 package connector
 
 import (
+	"math/rand"
+
 	pchannel "perun.network/go-perun/channel"
+	"perun.network/perun-icp-backend/wallet"
+	testwallet "perun.network/perun-icp-backend/wallet/test"
 )
 
 // Unique channel identifier
@@ -59,7 +63,7 @@ type (
 	// Sig is an off-chain signature.
 	Sig = [SigLen]byte
 	// AppID is the identifier of a channel application.
-	AppID    = OffIdentity
+	AppID    [OffIdentityLen]byte
 	Memo     = uint64
 	BlockNum = uint64
 	ExecPath = string
@@ -108,3 +112,62 @@ type (
 		Part OffIdentity
 	}
 )
+
+func (a AppID) Equal(b pchannel.AppID) bool {
+	bTyped, ok := b.(*AppID)
+	if !ok {
+		return false
+	}
+	return a == *bTyped
+}
+
+// Key returns the key representation of this app identifier.
+func (a AppID) Key() pchannel.AppIDKey {
+	b, err := a.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	return pchannel.AppIDKey(b)
+}
+
+// MarshalBinary marshals the contents of AppID into a byte string.
+func (a AppID) MarshalBinary() ([]byte, error) {
+	data := a
+	return data[:], nil
+	// return data, nil
+}
+
+// UnmarshalBinary converts a bytestring, representing AppID into the AppID struct.
+func (a *AppID) UnmarshalBinary(data []byte) error {
+	addr := &wallet.Address{}
+	err := addr.UnmarshalBinary(data)
+	if err != nil {
+		return err
+	}
+
+	var appIdent AppID
+	copy(appIdent[:], data)
+
+	*a = appIdent
+	return nil
+}
+
+func NewRandomAppID(rng *rand.Rand) *AppID {
+	addr := testwallet.NewRandomizer().NewRandomAddress(rng)
+
+	// Assuming addr is of type wallet.Address, and we need sr25519.Address
+	// Convert or cast the address to sr25519.Address if possible
+	srAddr, ok := addr.(*wallet.Address)
+	if !ok {
+		panic("address is not of type *sr25519.Address")
+	}
+	appIdent, err := srAddr.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+
+	var offIdentity AppID
+	copy(offIdentity[:], appIdent)
+
+	return &offIdentity
+}
