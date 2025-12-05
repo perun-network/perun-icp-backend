@@ -23,12 +23,16 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+const (
+	ICPBackendID = 5 // ICPBackendID is the ID of the Internet Computer wallet backend.
+)
+
 type Backend struct{}
 
 var _ wallet.Backend = Backend{}
 
 func init() {
-	wallet.SetBackend(Backend{})
+	wallet.SetBackend(Backend{}, ICPBackendID)
 }
 
 func (Backend) NewAddress() wallet.Address {

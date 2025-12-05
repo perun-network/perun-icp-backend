@@ -17,9 +17,11 @@ package channel
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 
 	"math/big"
+
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 	pwallet "perun.network/go-perun/wallet"
@@ -167,7 +169,7 @@ func (d *Depositor) Deposit(ctx context.Context, req *DepositReq) error { //, ci
 
 	addr := req.Account.L2Address()
 
-	err = d.cnr.DepositToPerunChannel(addr, req.Funding.Channel)
+	err = d.cnr.DepositToPerunChannel(*addr, req.Funding.Channel)
 	if err != nil {
 		return fmt.Errorf("failed to deposit to perun channel: %w", err)
 	}
@@ -191,7 +193,7 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 		return err
 	}
 
-	evSub, err := NewFundingEventSub(addr, tstamp, req, conn)
+	evSub, err := NewFundingEventSub(*addr, tstamp, req, conn)
 	if err != nil {
 		return fmt.Errorf("failed to create event subscription: %w", err)
 	}
@@ -228,7 +230,7 @@ func NewDepositReqFromPerun(req *pchannel.FundingReq, acc pwallet.Account) (*Dep
 }
 
 func MakeFundingReq(req *pchannel.FundingReq) (chanconn.Funding, error) {
-	ident, err := chanconn.MakeOffIdent(req.Params.Parts[req.Idx])
+	ident, err := chanconn.MakeOffIdent(req.Params.Parts[req.Idx][wallet.ICPBackendID])
 	cid := req.Params.ID()
 	return chanconn.Funding{
 		Channel: cid,

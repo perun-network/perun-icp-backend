@@ -29,8 +29,9 @@ In the following sections, we will describe how to run Payment Channels on a loc
 
 1. Install [dfx](https://internetcomputer.org/docs/current/references/cli-reference/dfx-parent), the DFINITY command-line execution environment:
 ```sh
-sh -ci "$(curl -fsSL https://smartcontracts.org/install.sh)"
+sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 ```
+
 
 2. Clone this repository
 ```sh
@@ -67,7 +68,7 @@ Verify that the identities have been imported, using ```dfx identity list``` and
 
 ## [Run the Internet Computer blockchain](#run~the~internet~computer~blockchain)
 
-After installation, to use the backend, you first need to instantiate a local Internet Computer and deploy the ledger Perun canister. The script ```deploycans.sh``` does this for you:
+After installation, to use the backend, you first need to instantiate a local Internet Computer and deploy the ledger Perun canister. The script ```deploycans.sh``` does **this** for you:
 
 ```sh
 cd perun-icp-backend

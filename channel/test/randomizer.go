@@ -17,9 +17,12 @@ package test
 import (
 	"math/big"
 	"math/rand"
+
 	pchannel "perun.network/go-perun/channel"
 	pchtest "perun.network/go-perun/channel/test"
+	pwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-icp-backend/channel"
+	"perun.network/perun-icp-backend/wallet"
 )
 
 // randomizer implements the channel/test.Randomizer interface.
@@ -48,6 +51,8 @@ func WithBalancesRange() pchtest.RandomOpt {
 func DefaultRandomOpts() pchtest.RandomOpt {
 	return WithBalancesRange().
 		Append(pchtest.WithoutApp()).
+		Append(pchtest.WithBackend(wallet.ICPBackendID)).
+		Append(pchtest.WithBackendIDs([]pwallet.BackendID{wallet.ICPBackendID})).
 		Append(pchtest.WithNumLocked(0)).
 		Append(pchtest.WithAssets(channel.Asset)).
 		Append(pchtest.WithNumParts(2))

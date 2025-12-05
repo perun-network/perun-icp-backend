@@ -1,13 +1,15 @@
 module perun.network/perun-icp-backend
 
-go 1.19
+go 1.22
+
+toolchain go1.23.4
 
 require (
 	github.com/aviate-labs/agent-go v0.3.0-alpha.1
-	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.2
-	perun.network/go-perun v0.10.6
+	github.com/stretchr/testify v1.10.0
+	perun.network/go-perun v0.13.0
 	polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37
 )
 
@@ -17,6 +19,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/di-wu/parser v0.3.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/herumi/bls-go-binary v1.28.2 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

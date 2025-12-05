@@ -18,12 +18,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pkg/errors"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 	chanconn "perun.network/perun-icp-backend/channel/connector"
 	"perun.network/perun-icp-backend/channel/connector/icperun"
-	"time"
 
 	"perun.network/perun-icp-backend/wallet"
 
@@ -288,11 +289,11 @@ func (a *Adjudicator) checkDisputes(ctx context.Context, req pchannel.Adjudicato
 	return nil
 }
 
-func MakeParts(addrs []pwallet.Address) ([][]byte, error) {
+func MakeParts(addrs []map[pwallet.BackendID]pwallet.Address) ([][]byte, error) {
 	parts := make([][]byte, len(addrs))
 
 	for i, part := range addrs {
-		partMb, err := part.MarshalBinary()
+		partMb, err := part[wallet.ICPBackendID].MarshalBinary()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal address: %w", err)
 		}
@@ -486,13 +487,13 @@ func (*Adjudicator) checkRegister(req pchannel.AdjudicatorReq, states []pchannel
 	}
 }
 
-func fullySignedTx(tx pchannel.Transaction, parts []pwallet.Address) error {
+func fullySignedTx(tx pchannel.Transaction, parts []map[pwallet.BackendID]pwallet.Address) error {
 	if len(tx.Sigs) != len(parts) {
 		return errors.Errorf("wrong number of signatures")
 	}
 
 	for i, p := range parts {
-		if ok, err := pchannel.Verify(p, tx.State, tx.Sigs[i]); err != nil {
+		if ok, err := pchannel.Verify(p[wallet.ICPBackendID], tx.State, tx.Sigs[i]); err != nil {
 			return errors.WithMessagef(err, "verifying signature[%d]", i)
 		} else if !ok {
 			return errors.Errorf("invalid signature[%d]", i)

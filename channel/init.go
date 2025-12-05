@@ -16,8 +16,9 @@ package channel
 
 import (
 	"perun.network/go-perun/channel"
+	"perun.network/perun-icp-backend/wallet"
 )
 
 func init() {
-	channel.SetBackend(new(backend))
+	channel.SetBackend(new(backend), wallet.ICPBackendID)
 }
